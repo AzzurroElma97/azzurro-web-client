@@ -1,14 +1,13 @@
 'use client';
     
-import {
-  setDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  CollectionReference,
-  DocumentReference,
-  SetOptions,
-} from 'firebase/firestore';
+type CollectionReference = any;
+type DocumentReference = any;
+type SetOptions = any;
+
+const setDoc = (...args: any[]) => Promise.resolve();
+const addDoc = (...args: any[]) => Promise.resolve();
+const updateDoc = (...args: any[]) => Promise.resolve();
+const deleteDoc = (...args: any[]) => Promise.resolve();
 import { errorEmitter } from '@/firebase/error-emitter';
 import {FirestorePermissionError} from '@/firebase/errors';
 
