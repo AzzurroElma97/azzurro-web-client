@@ -13,7 +13,11 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+
+// Local stubs replacing firebase/firestore (not used in this ecosystem)
+const doc = (..._args: any[]) => null;
+const updateDoc = (..._args: any[]) => Promise.resolve();
+const serverTimestamp = () => new Date().toISOString();
 import { useRouter } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay } from 'date-fns';

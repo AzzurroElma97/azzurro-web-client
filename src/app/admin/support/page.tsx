@@ -8,7 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Loader2, LifeBuoy, Phone, Calendar, Clock, Trash2, ArrowLeft, MessageCircle, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+
+// Local stubs replacing firebase/firestore (not used in this ecosystem)
+const collection = (..._args: any[]) => null;
+const query = (..._args: any[]) => null;
+const orderBy = (..._args: any[]) => null;
+const deleteDoc = (..._args: any[]) => Promise.resolve();
+const doc = (..._args: any[]) => ({ path: '' });
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';

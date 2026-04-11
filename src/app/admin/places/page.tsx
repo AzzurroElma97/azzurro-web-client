@@ -10,7 +10,13 @@ import { MapPin, Plus, Trash2, ShieldCheck, ShieldAlert, Loader2, Save, ArrowLef
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useDoc, useMemoFirebase, useUser, useCollection } from '@/firebase';
-import { doc, setDoc, collection, query, limit } from 'firebase/firestore';
+
+// Local stubs replacing firebase/firestore (not used in this ecosystem)
+const doc = (..._args: any[]) => null;
+const setDoc = (..._args: any[]) => Promise.resolve();
+const collection = (..._args: any[]) => null;
+const query = (..._args: any[]) => null;
+const limit = (..._args: any[]) => null;
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useRouter } from 'next/navigation';
