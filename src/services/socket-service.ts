@@ -1,0 +1,51 @@
+import { io, Socket } from 'socket.io-client';
+
+class SocketService {
+  private socket: Socket | null = null;
+  private readonly RELAY_URL = 'https://azzurro-relay-broker.onrender.com'; // Live Ponte v2.0
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      this.socket = io(this.RELAY_URL, {
+        autoConnect: true,
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+      });
+
+      this.socket.on('connect', () => {
+        console.log('📡 Connesso al Relay Broker Titanium');
+      });
+
+      this.socket.on('disconnect', () => {
+        console.log('🔴 Disconnesso dal Relay');
+      });
+    }
+  }
+
+  public on(event: string, callback: (data: any) => void) {
+    this.socket?.on(event, callback);
+  }
+
+  public once(event: string, callback: (data: any) => void) {
+    this.socket?.once(event, callback);
+  }
+
+  public off(event: string) {
+    this.socket?.off(event);
+  }
+
+  public emit(event: string, data: any, callback?: (res: any) => void) {
+    if (this.socket) {
+      this.socket.emit(event, data, callback);
+    } else {
+      console.warn('⚠️ Socket non inizializzato');
+    }
+  }
+
+  public getSocketId() {
+    return this.socket?.id;
+  }
+}
+
+export const socketService = new SocketService();

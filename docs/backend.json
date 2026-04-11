@@ -1,0 +1,503 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a registered user of the AzzurroCommunityRide application, encompassing both passengers and potential drivers or administrators. This entity stores core user information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The primary email address of the user, used for communication and login.",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The primary phone number of the user."
+        },
+        "profileImageUrl": {
+          "type": "string",
+          "description": "URL to the user's profile picture.",
+          "format": "uri"
+        },
+        "averageRating": {
+          "type": "number",
+          "description": "The average rating received by the user, if applicable (e.g., as a passenger)."
+        },
+        "roles": {
+          "type": "array",
+          "description": "A list of roles assigned to the user within the application (e.g., 'passenger', 'driver', 'admin').",
+          "items": {
+            "type": "string"
+          }
+        },
+        "totalCompletedRidesAsPassenger": {
+          "type": "number",
+          "description": "The total number of rides completed by the user as a passenger."
+        },
+        "totalCompletedRidesAsDriver": {
+          "type": "number",
+          "description": "The total number of rides completed by the user as a driver."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "phoneNumber",
+        "roles",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Driver": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Driver",
+      "type": "object",
+      "description": "Represents a user who has registered and been approved to provide rides. This entity holds driver-specific information and links to a User entity.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Driver entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User entity this driver profile belongs to. (Relationship: User 1:1 Driver)"
+        },
+        "licenseNumber": {
+          "type": "string",
+          "description": "The unique driver's license number."
+        },
+        "driverRating": {
+          "type": "number",
+          "description": "The average rating received by the driver from passengers."
+        },
+        "isApproved": {
+          "type": "boolean",
+          "description": "Indicates if the driver has been approved by an administrator to provide rides."
+        },
+        "isAvailable": {
+          "type": "boolean",
+          "description": "Indicates if the driver is currently available to accept ride requests."
+        },
+        "serviceTypePreferences": {
+          "type": "array",
+          "description": "A list of service types this driver prefers to offer (e.g., 'Standard', 'Premium').",
+          "items": {
+            "type": "string"
+          }
+        },
+        "currentVehicleId": {
+          "type": "string",
+          "description": "Reference to the Vehicle entity currently associated with this driver. (Relationship: Driver 1:1 Vehicle)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the driver profile was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the driver profile was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "licenseNumber",
+        "isApproved",
+        "isAvailable",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Vehicle": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Vehicle",
+      "type": "object",
+      "description": "Represents a vehicle used by a driver to provide rides. Each vehicle is associated with a driver.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Vehicle entity."
+        },
+        "driverId": {
+          "type": "string",
+          "description": "Reference to the Driver entity who owns or operates this vehicle. (Relationship: Driver 1:N Vehicle)"
+        },
+        "make": {
+          "type": "string",
+          "description": "The manufacturer of the vehicle (e.g., 'Toyota', 'Tesla')."
+        },
+        "model": {
+          "type": "string",
+          "description": "The specific model of the vehicle (e.g., 'Camry', 'Model 3')."
+        },
+        "year": {
+          "type": "number",
+          "description": "The manufacturing year of the vehicle."
+        },
+        "licensePlate": {
+          "type": "string",
+          "description": "The unique license plate number of the vehicle."
+        },
+        "color": {
+          "type": "string",
+          "description": "The color of the vehicle."
+        },
+        "capacity": {
+          "type": "number",
+          "description": "The maximum number of passengers the vehicle can comfortably carry."
+        },
+        "vehicleType": {
+          "type": "string",
+          "description": "The type of vehicle (e.g., 'Sedan', 'SUV', 'Electric', 'Van')."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to an image of the vehicle.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the vehicle record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the vehicle record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "driverId",
+        "make",
+        "model",
+        "year",
+        "licensePlate",
+        "capacity",
+        "vehicleType",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Ride": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Ride",
+      "type": "object",
+      "description": "Represents a single ride booking, connecting a passenger with a driver and detailing the ride parameters, status, and outcome.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Ride entity."
+        },
+        "passengerId": {
+          "type": "string",
+          "description": "Reference to the User entity who booked the ride. (Relationship: User 1:N Ride)"
+        },
+        "driverId": {
+          "type": "string",
+          "description": "Reference to the Driver entity who accepted and/or completed the ride. This can be null initially. (Relationship: Driver 1:N Ride)"
+        },
+        "serviceType": {
+          "type": "string",
+          "description": "The type of ride service requested (e.g., 'Standard', 'Premium', 'Shared')."
+        },
+        "pickupLatitude": {
+          "type": "number",
+          "description": "The latitude coordinate for the ride's pickup location."
+        },
+        "pickupLongitude": {
+          "type": "number",
+          "description": "The longitude coordinate for the ride's pickup location."
+        },
+        "pickupAddressText": {
+          "type": "string",
+          "description": "The full textual address description for the ride's pickup location."
+        },
+        "dropoffLatitude": {
+          "type": "number",
+          "description": "The latitude coordinate for the ride's drop-off location."
+        },
+        "dropoffLongitude": {
+          "type": "number",
+          "description": "The longitude coordinate for the ride's drop-off location."
+        },
+        "dropoffAddressText": {
+          "type": "string",
+          "description": "The full textual address description for the ride's drop-off location."
+        },
+        "requestedPickupTime": {
+          "type": "string",
+          "description": "The date and time the passenger requested to be picked up.",
+          "format": "date-time"
+        },
+        "actualPickupTime": {
+          "type": "string",
+          "description": "The actual date and time the passenger was picked up by the driver.",
+          "format": "date-time"
+        },
+        "actualDropoffTime": {
+          "type": "string",
+          "description": "The actual date and time the passenger was dropped off.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the ride (e.g., 'PENDING', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')."
+        },
+        "fareAmount": {
+          "type": "number",
+          "description": "The calculated fare amount for the ride."
+        },
+        "currency": {
+          "type": "string",
+          "description": "The currency in which the fare amount is denominated (e.g., 'USD', 'EUR')."
+        },
+        "passengerRatingToDriver": {
+          "type": "number",
+          "description": "The rating given by the passenger to the driver for this specific ride (1-5)."
+        },
+        "driverRatingToPassenger": {
+          "type": "number",
+          "description": "The rating given by the driver to the passenger for this specific ride (1-5)."
+        },
+        "distanceKm": {
+          "type": "number",
+          "description": "The total distance covered during the ride in kilometers."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the ride request was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the ride record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "passengerId",
+        "serviceType",
+        "pickupLatitude",
+        "pickupLongitude",
+        "pickupAddressText",
+        "dropoffLatitude",
+        "dropoffLongitude",
+        "dropoffAddressText",
+        "requestedPickupTime",
+        "status",
+        "fareAmount",
+        "currency",
+        "distanceKm",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ChatMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatMessage",
+      "type": "object",
+      "description": "Represents a single message sent within the application's chat system, which can be global or specific to a ride.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ChatMessage entity."
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Reference to the User entity who sent this message. (Relationship: User 1:N ChatMessage)"
+        },
+        "rideId": {
+          "type": "string",
+          "description": "Optional reference to the Ride entity if this message is part of a ride-specific chat. (Relationship: Ride 1:N ChatMessage)"
+        },
+        "messageText": {
+          "type": "string",
+          "description": "The content of the chat message."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The date and time when the message was sent.",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the chat message record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the chat message record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "senderId",
+        "messageText",
+        "timestamp",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores individual user profiles. Access is path-based, with `userId` mapping directly to `request.auth.uid` for owner access. Includes core user information for all roles (passenger, potential driver, admin).",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user, typically matching Firebase Authentication UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/drivers/{driverId}",
+        "definition": {
+          "entityName": "Driver",
+          "schema": {
+            "$ref": "#/backend/entities/Driver"
+          },
+          "description": "Stores driver-specific profiles. The `driverId` here is expected to be identical to the corresponding `userId` for the Driver's User profile, ensuring a 1:1 relationship and path-based ownership. Includes denormalized 'userId' field for authorization independence.",
+          "params": [
+            {
+              "name": "driverId",
+              "description": "The unique ID of the driver, which is also their `userId`."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/drivers/{driverId}/vehicles/{vehicleId}",
+        "definition": {
+          "entityName": "Vehicle",
+          "schema": {
+            "$ref": "#/backend/entities/Vehicle"
+          },
+          "description": "Stores vehicles associated with a specific driver. Access is restricted to the driver identified by `driverId` in the path, and explicitly via the `driverId` field within the document, ensuring authorization independence.",
+          "params": [
+            {
+              "name": "driverId",
+              "description": "The unique ID of the driver who owns the vehicle."
+            },
+            {
+              "name": "vehicleId",
+              "description": "The unique ID of the vehicle."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/rides/{rideId}",
+        "definition": {
+          "entityName": "Ride",
+          "schema": {
+            "$ref": "#/backend/entities/Ride"
+          },
+          "description": "Contains details for each ride. Authorization is independent, relying on `passengerId` and `driverId` fields within the document to grant access to the respective user or driver. This allows for secure querying and access without `get()` calls.",
+          "params": [
+            {
+              "name": "rideId",
+              "description": "The unique ID of the ride."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/rides/{rideId}/chatMessages/{messageId}",
+        "definition": {
+          "entityName": "ChatMessage",
+          "schema": {
+            "$ref": "#/backend/entities/ChatMessage"
+          },
+          "description": "Stores chat messages specific to a particular ride. This collection *requires* denormalization of the parent ride's `passengerId` and `driverId` (e.g., as `ridePassengerId`, `rideDriverId`) into each `ChatMessage` document to ensure authorization independence and avoid `get()` calls in rules. Includes `senderId` for direct message ownership check.",
+          "params": [
+            {
+              "name": "rideId",
+              "description": "The unique ID of the parent ride."
+            },
+            {
+              "name": "messageId",
+              "description": "The unique ID of the chat message."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/global_chat_messages/{messageId}",
+        "definition": {
+          "entityName": "ChatMessage",
+          "schema": {
+            "$ref": "#/backend/entities/ChatMessage"
+          },
+          "description": "A collection for global chat messages, accessible by all authenticated users. Homogeneous security posture simplifies rules (authenticated users can read/write).",
+          "params": [
+            {
+              "name": "messageId",
+              "description": "The unique ID of the global chat message."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "A collection to manage administrator roles. The existence of a document at `roles_admin/{userId}` indicates that the `userId` is an administrator. This is used for database-backed access control (DBAC) and allows for simple `exists()` checks in security rules.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user who has been assigned the 'admin' role."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure for AzzurroCommunityRide prioritizes robust security, scalability, and debuggability by strictly adhering to the core design principles. \n\n**Authorization Independence via Denormalization:**\nCrucially, all authorization decisions are made without requiring `get()` calls in security rules, ensuring atomic operations and simplifying rule logic. For entities like `User`, `Driver`, and `Vehicle`, ownership is inherently tied to the path (`/users/{userId}`, `/drivers/{driverId}`, `/drivers/{driverId}/vehicles/{vehicleId}`), allowing rules to directly check `request.auth.uid` against the path wildcard (`userId`, `driverId`). \n\nThe `Ride` entity (`/rides/{rideId}`) includes both `passengerId` and `driverId` directly within the document. This means any read/write operation on a `Ride` document can authorize access by checking `resource.data.passengerId == request.auth.uid` or `resource.data.driverId == request.auth.uid`. \n\nFor ride-specific chat messages (`/rides/{rideId}/chatMessages/{messageId}`), a critical denormalization step is applied. Each `ChatMessage` document within this subcollection will include denormalized `ridePassengerId` and `rideDriverId` fields, copied from its parent `Ride` document. This allows security rules for `chatMessages` to check `resource.data.ridePassengerId == request.auth.uid` or `resource.data.rideDriverId == request.auth.uid` directly, completely eliminating the need for `get()` calls to the parent `Ride` document. This ensures authorization independence for subcollections, a cornerstone of this design.\n\n**QAPs (Rules are not Filters) and Structural Segregation:**\nStructural segregation is applied to ensure that all documents within a collection share a homogeneous security posture, enabling Query-After-Permissions (QAPs). \n\n*   **`/users/{userId}` and `/drivers/{driverId}`:** These collections are primarily for individual user/driver profiles. A user/driver can only access their own profile. Admins have broader access, granted via the `/roles_admin/{userId}` collection. When a user requests their own profile (`/users/current_user_id`), the rule `request.auth.uid == userId` ensures no filtering is needed. Admin reads are also explicit.\n*   **`/drivers/{driverId}/vehicles/{vehicleId}`:** Vehicles are directly owned by the `driverId` in the path. Drivers can list and manage their *own* vehicles. The security rule `request.auth.uid == driverId` (from the path) explicitly dictates ownership, satisfying QAPs for listing operations by a driver.\n*   **`/rides/{rideId}`:** This collection stores all ride data. Passengers can query for `rides` where `passengerId == request.auth.uid`, and drivers can query for `rides` where `driverId == request.auth.uid` or where `status == 'PENDING'` and `driverId == null` (for available rides). The security rules will allow read access only if `request.auth.uid` matches either the `passengerId` or `driverId` field in the document. This ensures that any ride document returned by a query is genuinely accessible to the requester, meeting the QAP requirement.\n*   **`/rides/{rideId}/chatMessages/{messageId}`:** With the denormalized `ridePassengerId` and `rideDriverId`, users involved in a specific ride can query and list messages within that ride's chat. The rules directly enforce that the requesting `uid` must match one of these denormalized IDs, thereby supporting QAPs for chat messages.\n*   **`/global_chat_messages/{messageId}`:** This collection has a universally simple security posture: all authenticated users can read and write. This clear, uniform access model inherently satisfies QAP.\n*   **`/roles_admin/{userId}`:** This collection is used for DBAC. The *existence* of a document at `/roles_admin/$(request.auth.uid)` grants administrative privileges. This pattern is explicit and easy to check in rules, avoiding filtering.\n\nThis structure systematically embeds authorization context within each document or path segment, ensuring that security rules are simple, atomic, and operate efficiently without the need for complex, performance-impacting `get()` operations, while explicitly supporting secure list operations."
+  }
+}
