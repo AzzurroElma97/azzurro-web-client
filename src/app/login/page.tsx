@@ -40,7 +40,7 @@ export default function LoginPage() {
 
     const action = userType === 'customer' ? 'LOGIN_CUSTOMER' : 'LOGIN_DRIVER';
 
-    socketService.emit('process_request', {
+    socketService.emit('client_request', {
       action,
       email: userType === 'customer' ? identifier : undefined,
       identifier: userType === 'driver' ? identifier : undefined,

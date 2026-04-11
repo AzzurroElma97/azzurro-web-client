@@ -43,7 +43,7 @@ export default function RegisterPage() {
 
     const action = userType === 'customer' ? 'REGISTER_CUSTOMER' : 'REGISTER_DRIVER';
 
-    socketService.emit('process_request', {
+    socketService.emit('client_request', {
       action,
       ...formData
     }, (res: any) => {
