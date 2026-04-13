@@ -35,9 +35,27 @@ class SocketService {
     this.socket?.off(event);
   }
 
-  public emit(event: string, data: any, callback?: (res: any) => void) {
+  public emit(event: string, data: any, callback?: (res: any) => void, timeoutMs: number = 0) {
     if (this.socket) {
-      this.socket.emit(event, data, callback);
+      if (timeoutMs > 0 && callback) {
+        let called = false;
+        const timer = setTimeout(() => {
+          if (!called) {
+            called = true;
+            callback({ success: false, message: 'TIMEOUT_EXCEEDED', error: `Il server Master non ha risposto entro ${timeoutMs/1000}s.` });
+          }
+        }, timeoutMs);
+
+        this.socket.emit(event, data, (res: any) => {
+          if (!called) {
+            called = true;
+            clearTimeout(timer);
+            callback(res);
+          }
+        });
+      } else {
+        this.socket.emit(event, data, callback);
+      }
     } else {
       console.warn('⚠️ Socket non inizializzato');
     }
