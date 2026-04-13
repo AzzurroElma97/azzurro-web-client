@@ -16,6 +16,8 @@ import {
   Mail,
   Lock,
   Phone,
+  ArrowLeft,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,15 +47,6 @@ export default function AdminPage() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      const timer = setTimeout(() => {
-        router.push('/');
-      }, 30000);
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated, router]);
-
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -80,7 +73,7 @@ export default function AdminPage() {
     setIsAutoWaiting(true);
     setError('');
 
-    // Aumento il timeout a 30 secondi per dare tempo al Master di cliccare sul dispositivo
+    // Timeout ridotto a 15 secondi come richiesto
     socketService.emit('client_request', {
       action: 'REQUEST_AUTO_LOGIN',
       device: typeof window !== 'undefined' ? navigator.userAgent : 'Unknown Web Client'
@@ -92,12 +85,12 @@ export default function AdminPage() {
         localStorage.setItem('adminEmail', 'AUTO_LOGIN');
       } else {
         if (res?.message === 'TIMEOUT_EXCEEDED') {
-          setError('Tempo scaduto! Assicurati di accettare la richiesta sul Blackview entro 30 secondi.');
+          setError('Tempo scaduto! Assicurati di accettare la richiesta sul Blackview entro 15 secondi.');
         } else {
           setError(res?.message || 'Accesso automatico rifiutato dal Master.');
         }
       }
-    }, 30000); // 30s di timeout
+    }, 15000); 
   };
 
   const handleLogout = () => {
@@ -108,97 +101,93 @@ export default function AdminPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
-        <Card className="w-full max-w-md border-none shadow-2xl rounded-3xl overflow-hidden animate-in fade-in zoom-in duration-500">
-          <CardContent className="p-8 space-y-8">
-            <div className="text-center space-y-2">
-              <div className="w-20 h-20 bg-blue-600 rounded-3xl mx-auto flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20">
-                <ShieldCheck className="w-10 h-10 text-white" />
-              </div>
-              <h2 className="text-3xl font-black text-slate-900">Elite Master</h2>
-              <p className="text-slate-500 font-medium italic">Sistema di Controllo Titanium</p>
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4 relative overflow-hidden">
+        {/* Sfondo Decorativo */}
+        <div className="absolute inset-0 z-0 opacity-20">
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600/10 rounded-full blur-[120px]" />
+        </div>
+
+        <Card className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-white/5 border-slate-800 p-8 rounded-[3rem] shadow-2xl space-y-8 animate-in fade-in zoom-in-95 duration-700 z-10 transition-all">
+          <div className="text-center space-y-3">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl mx-auto flex items-center justify-center shadow-2xl shadow-blue-500/20 rotate-3">
+              <ShieldCheck className="w-10 h-10 text-white" />
             </div>
-            
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div className="space-y-4">
-                <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">
-                    <Mail className="w-5 h-5" />
-                  </div>
+            <h1 className="text-4xl font-black text-white uppercase tracking-tighter pt-2">Admin Panel</h1>
+            <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em]">Protocollo Titanium v2.0</p>
+          </div>
+
+          <div className="space-y-4">
+            {error && (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl animate-in slide-in-from-top-2">
+                <p className="text-[11px] font-bold text-red-500 text-center uppercase tracking-wider">{error}</p>
+                <Link href="/" className="block mt-2 text-[9px] text-center font-black text-red-400 uppercase tracking-widest hover:text-red-300">Torna alla Home</Link>
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-4">
+               <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <Input 
                     type="email" 
-                    placeholder="Email Amministratore" 
+                    placeholder="EMAIL" 
+                    className="h-14 pl-12 rounded-2xl bg-white/5 border-white/10 text-white placeholder:text-slate-600 font-bold focus:ring-2 focus:ring-blue-500/50" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="h-14 pl-12 rounded-2xl border-slate-100 bg-slate-50 focus:bg-white transition-all text-slate-900 font-medium"
-                    autoFocus
                   />
-                </div>
-
-                <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">
-                    <Lock className="w-5 h-5" />
-                  </div>
+               </div>
+               <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <Input 
                     type="password" 
-                    placeholder="Password Segreta" 
+                    placeholder="PASSWORD" 
+                    className="h-14 pl-12 rounded-2xl bg-white/5 border-white/10 text-white placeholder:text-slate-600 font-bold focus:ring-2 focus:ring-blue-500/50" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="h-14 pl-12 rounded-2xl border-slate-100 bg-slate-50 focus:bg-white transition-all text-slate-900 font-medium"
                   />
-                </div>
-
-                {error && (
-                  <div className="p-4 bg-red-50 border border-red-100 rounded-xl">
-                    <p className="text-red-500 text-sm font-bold text-center animate-pulse">{error}</p>
-                  </div>
-                )}
-              </div>
-
-              <Button 
+               </div>
+               <Button 
                 type="submit" 
-                disabled={isLoading}
-                className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg shadow-xl shadow-blue-500/10 hover:shadow-blue-500/30 transition-all flex items-center justify-center gap-3"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Verifica in corso...
-                  </>
-                ) : (
-                  <>Accedi al Sistema Master</>
-                )}
-              </Button>
+                disabled={isLoading || isAutoWaiting} 
+                className="w-full h-14 rounded-2xl bg-white text-slate-900 font-black uppercase text-[11px] tracking-widest hover:bg-slate-200 transition-all"
+               >
+                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Accedi Manualmente"}
+               </Button>
             </form>
 
-            <div className="pt-4 space-y-4 border-t border-slate-100">
-              <Button 
-                type="button"
-                onClick={handleAutoLogin}
-                disabled={isLoading || isAutoWaiting}
-                variant="outline"
-                className="w-full h-14 rounded-2xl border-blue-200 text-blue-600 font-bold hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
-              >
-                {isAutoWaiting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    In attesa di approvazione Master...
-                  </>
-                ) : (
-                  <>
-                    <Phone className="w-5 h-5" />
-                    Richiedi Accesso Automatico al Master
-                  </>
-                )}
-              </Button>
+            <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/10" /></div>
+                <div className="relative flex justify-center text-[9px] uppercase font-black"><span className="bg-slate-900 px-3 text-slate-600 tracking-[0.2em]">Oppure</span></div>
             </div>
 
-            <div className="text-center pt-4">
-               <p className="text-xs text-slate-400 font-medium uppercase tracking-widest">Powered by Blackview SQLite Master</p>
-            </div>
-          </CardContent>
+            <Button 
+              className="w-full h-16 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[11px] tracking-widest shadow-xl shadow-blue-500/20 flex items-center justify-center gap-3 transition-all enabled:hover:scale-[1.02] disabled:opacity-50"
+              onClick={handleAutoLogin}
+              disabled={isAutoWaiting || isLoading}
+            >
+              {isAutoWaiting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Attesa Master (15s)...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-5 h-5" />
+                  Autorizza via Blackview
+                </>
+              )}
+            </Button>
+
+            <Link href="/" className="block w-full text-center text-slate-600 hover:text-slate-400 transition-colors text-[9px] font-black uppercase tracking-[0.3em] pt-4">
+              <ArrowLeft className="inline w-3 h-3 mr-2" />
+              Torna alla Home
+            </Link>
+          </div>
+          
+          <div className="text-center">
+            <p className="text-[8px] font-black text-slate-700 uppercase tracking-widest">Azzurro Security Enforcement</p>
+          </div>
         </Card>
       </div>
     );

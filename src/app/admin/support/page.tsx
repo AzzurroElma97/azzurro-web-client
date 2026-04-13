@@ -1,81 +1,63 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, LifeBuoy, Phone, Calendar, Clock, Trash2, ArrowLeft, MessageCircle, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-
-// Local stubs replacing firebase/firestore (not used in this ecosystem)
-const collection = (..._args: any[]) => null;
-const query = (..._args: any[]) => null;
-const orderBy = (..._args: any[]) => null;
-const deleteDoc = (..._args: any[]) => Promise.resolve();
-const doc = (..._args: any[]) => ({ path: '' });
+import { socketService } from '@/services/socket-service';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
-import { ChatDialog } from '@/components/chat/chat-dialog';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
-
-const ADMIN_EMAIL = 'creator.azzurro@gmail.com';
 
 export default function AdminSupportPage() {
-  const { user, isUserLoading: userLoading } = useUser();
+  const [requests, setRequests] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
-  const db = useFirestore();
 
-  const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-
-  // Reindirizzamento se non admin
   useEffect(() => {
-    if (!userLoading && !isAdmin) {
-      router.push('/');
+    const isAdmin = localStorage.getItem('isAdminAuthenticated') === 'true';
+    if (!isAdmin) {
+      router.push('/admin');
+      return;
     }
-  }, [isAdmin, userLoading, router]);
 
-  // Guard query: Only create reference if user is confirmed as admin
-  const supportRef = useMemoFirebase(() => 
-    (db && isAdmin) 
-      ? query(collection(db, 'support_requests'), orderBy('createdAt', 'desc')) 
-      : null, 
-  [db, isAdmin]);
+    fetchRequests();
+  }, []);
 
-  const { data: requests, isLoading: collectionLoading } = useCollection(supportRef);
-  
-  const handleDelete = async (id: string) => {
-    if (!db || !isAdmin) return;
-    if (!confirm("Rimuovere questa richiesta definitivamente?")) return;
-
-    const requestRef = doc(db, 'support_requests', id);
-    deleteDoc(requestRef)
-      .then(() => {
-        toast({ title: "Richiesta rimossa dalla lista" });
-      })
-      .catch(async (error) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: requestRef.path,
-          operation: 'delete',
-        }));
-      });
+  const fetchRequests = () => {
+    setIsLoading(true);
+    socketService.emit('client_request', { action: 'GET_SUPPORT_REQUESTS' }, (res: any) => {
+      setIsLoading(false);
+      if (res && res.success) {
+        setRequests(res.items);
+      }
+    });
   };
 
-  if (userLoading || (isAdmin && collectionLoading)) {
+  const handleDelete = async (id: number) => {
+    if (!confirm("Rimuovere questa richiesta definitivamente?")) return;
+
+    socketService.emit('client_request', { action: 'DELETE_SUPPORT_REQUEST', payload: { id } }, (res: any) => {
+      if (res && res.success) {
+        toast({ title: "Richiesta rimossa dalla lista" });
+        fetchRequests();
+      } else {
+        toast({ title: "Errore durante l'eliminazione", variant: 'destructive' });
+      }
+    });
+  };
+
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-20 flex justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
-  }
-
-  if (!isAdmin) {
-    return null;
   }
 
   return (
@@ -88,7 +70,7 @@ export default function AdminSupportPage() {
           <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3 uppercase">
             <LifeBuoy className="text-red-600" /> Centro Assistenza
           </h1>
-          <p className="text-muted-foreground font-medium">Gestione delle richieste di aiuto e segnalazioni dagli utenti.</p>
+          <p className="text-muted-foreground font-medium">Gestione delle richieste di aiuto e segnalazioni (Master Blackview).</p>
         </div>
         <div className="flex items-center gap-3">
             <Button variant="outline" asChild className="rounded-xl h-10 font-bold border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
@@ -97,7 +79,7 @@ export default function AdminSupportPage() {
                 </Link>
             </Button>
             <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 font-black h-10 px-4 flex items-center uppercase text-[10px] tracking-widest">
-                {requests?.length || 0} Ticket Aperti
+                {requests.length} Ticket Aperti
             </Badge>
         </div>
       </div>
@@ -114,7 +96,7 @@ export default function AdminSupportPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {requests && requests.length > 0 ? requests.map((req) => (
+              {requests.length > 0 ? requests.map((req) => (
                 <TableRow key={req.id} className="hover:bg-slate-50/30 transition-colors">
                   <TableCell className="px-8 py-5">
                     <div className="flex flex-col text-left">
@@ -128,11 +110,11 @@ export default function AdminSupportPage() {
                     <div className="flex flex-col text-[11px] font-bold text-slate-600 text-left">
                         <span className="flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5 text-slate-300" /> 
-                            {req.createdAt?.toDate ? format(req.createdAt.toDate(), 'dd MMM yyyy', { locale: it }) : '-'}
+                            {req.createdAt ? format(new Date(req.createdAt), 'dd MMM yyyy', { locale: it }) : '-'}
                         </span>
                         <span className="flex items-center gap-1.5 text-slate-400 mt-0.5">
                             <Clock className="w-3.5 h-3.5 text-slate-300" /> 
-                            {req.createdAt?.toDate ? format(req.createdAt.toDate(), 'HH:mm') : '-'}
+                            {req.createdAt ? format(new Date(req.createdAt), 'HH:mm') : '-'}
                         </span>
                     </div>
                   </TableCell>
@@ -144,27 +126,17 @@ export default function AdminSupportPage() {
                                 <Badge className="bg-blue-600 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-lg border-none">
                                     {req.context}
                                 </Badge>
-                                {req.reportedUserName && (
-                                    <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">
-                                        Segnalato: {req.reportedUserName}
-                                    </span>
-                                )}
                             </div>
                         )}
                     </div>
                   </TableCell>
                   <TableCell className="text-right px-8">
                     <div className="flex items-center justify-end gap-3">
-                        <ChatDialog 
-                          chatId={req.id} 
-                          collectionPath={`support_requests/${req.id}/messages`} 
-                          title={`Assistenza: ${req.userName}`}
-                          trigger={
-                            <Button variant="outline" size="sm" className="rounded-xl h-10 px-5 font-black text-[10px] uppercase tracking-widest gap-2 border-slate-200 bg-white hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm">
-                              <MessageCircle className="w-4 h-4" /> Rispondi
-                            </Button>
-                          }
-                        />
+                        <Link href={`https://wa.me/${req.userPhone?.replace(/\s+/g, '')}`} target="_blank">
+                          <Button variant="outline" size="sm" className="rounded-xl h-10 px-5 font-black text-[10px] uppercase tracking-widest gap-2 border-slate-200 bg-white hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-100 transition-all shadow-sm">
+                            <MessageCircle className="w-4 h-4" /> WhatsApp
+                          </Button>
+                        </Link>
                         <Button 
                             variant="ghost" 
                             size="icon" 

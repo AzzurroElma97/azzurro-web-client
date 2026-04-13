@@ -26,6 +26,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toPng } from 'html-to-image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // --- TYPES & CONSTANTS ---
 export enum ServiceType {
@@ -154,24 +155,24 @@ export default function HomePage() {
       'client_request',
       { action: 'TRACK_RIDE', payload: { ticket_id: lookupCode.trim().toUpperCase() } },
       (res: any) => {
+        console.log('📡 Risultato Ricerca:', res);
         clearTimeout(timeoutId);
         setIsSearching(false);
         if (res && res.success && res.ride) {
-          // Mappa i campi backend al formato visual
           const r = res.ride;
           setLookupResult({
-            bookingCode: r.ticket_id || r.bookingCode,
-            serviceType: r.tipo_servizio || r.serviceType || 'Standard',
-            passengerName: r.cliente_nome || r.passengerName || 'N/D',
-            passengerPhone: r.cliente_telefono || r.passengerPhone || '',
-            date: r.data_partenza || r.date || '',
-            time: r.ora_partenza || r.time || '',
-            origin: r.partenza_obj?.address || r.origin || '',
-            destination: r.destinazione_obj?.address || r.destination || '',
-            price: r.preventivo_accettato || r.price || 0,
-            passengers: r.passeggeri || r.passengers || 1,
-            driverName: r.driverName || 'Autista Azzurro',
-            driverVehicle: r.driverVehicle || 'Auto Flotta',
+            bookingCode: r.ticket_id,
+            serviceType: r.tipo_servizio,
+            passengerName: r.cliente_nome,
+            passengerPhone: r.cliente_telefono,
+            date: r.data_partenza,
+            time: r.ora_partenza,
+            origin: r.partenza_indirizzo,
+            destination: r.destinazione_indirizzo,
+            price: r.preventivo_accettato,
+            passengers: r.passeggeri,
+            driverName: r.driver_nome || 'In attesa di assegnazione',
+            driverVehicle: r.driver_auto || 'Veicolo Azzurro',
             intermediateStops: r.tappe_intermedie ? (typeof r.tappe_intermedie === 'string' ? JSON.parse(r.tappe_intermedie) : r.tappe_intermedie) : [],
           });
         } else {
@@ -423,11 +424,19 @@ export default function HomePage() {
           <ActionIcon icon={<History />} label="Stato Corse" onClick={() => {}} color="cyan" isDialog={true} dialogContent={<LookupContent lookupCode={lookupCode} setLookupCode={setLookupCode} handleLookup={handleLookup} isSearching={isSearching} lookupResult={lookupResult} />} />
         </div>
 
-        <div className="container mx-auto px-4 py-8 text-center space-y-4">
-          <Badge variant="outline" className="border-blue-200 bg-blue-50/50 text-blue-600 font-black px-6 py-1.5 rounded-full uppercase tracking-widest text-[9px] backdrop-blur-sm shadow-sm">AZZURRO COMMUNITY FRIENDS</Badge>
-          <h1 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-[0.9]">Hai bisogno di un<br /><span className="text-blue-600">passaggio?</span></h1>
-          <p className="text-slate-500 font-medium max-w-md mx-auto text-sm leading-relaxed opacity-80">Il network di amici della Brianza.<br />Scegli il servizio e calcola il tuo prezzo fisso.</p>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="container mx-auto px-4 py-8 text-center space-y-4"
+        >
+          <Badge variant="outline" className="border-blue-200 bg-blue-50/50 text-blue-600 font-black px-6 py-1.5 rounded-full uppercase tracking-widest text-[9px] backdrop-blur-sm shadow-sm animate-pulse">AZZURRO COMMUNITY FRIENDS</Badge>
+          <h1 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter leading-[0.85] drop-shadow-sm">
+            Hai bisogno di un<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">passaggio?</span>
+          </h1>
+          <p className="text-slate-500 font-medium max-w-md mx-auto text-sm leading-relaxed opacity-80 pt-2">Il network di amici della Brianza.<br />Scegli il servizio e calcola il tuo prezzo fisso.</p>
+        </motion.div>
 
         {bookingStep < 4 && (
             <div className="container mx-auto px-4 flex justify-center mb-8">
@@ -443,11 +452,30 @@ export default function HomePage() {
 
         <div ref={bookingRef} className="container mx-auto px-4 max-w-4xl min-h-[500px]">
           {bookingStep === 1 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 animate-in slide-in-from-bottom-8 duration-700">
+            <motion.div 
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: { staggerChildren: 0.15 }
+                }
+              }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6"
+            >
                 {Object.values(ServiceType).map(t => (
-                    <ServiceCard key={t} type={t} isDisabled={appSettings?.deactivatedServices?.includes(t)} customMessage={appSettings?.serviceMessages?.[t]} onClick={() => handleSelectService(t)} />
+                    <motion.div 
+                      key={t}
+                      variants={{
+                        hidden: { y: 20, opacity: 0 },
+                        visible: { y: 0, opacity: 1 }
+                      }}
+                    >
+                      <ServiceCard type={t} isDisabled={appSettings?.deactivatedServices?.includes(t)} customMessage={appSettings?.serviceMessages?.[t]} onClick={() => handleSelectService(t)} />
+                    </motion.div>
                 ))}
-            </div>
+            </motion.div>
           )}
 
           {bookingStep === 2 && selectedService && (
@@ -713,10 +741,15 @@ function ServiceCard({ type, onClick, isDisabled, customMessage }: any) {
   const info = SERVICE_INFO[type as ServiceType];
   const color = type === ServiceType.URGENT ? "red" : type === ServiceType.STANDARD ? "emerald" : "blue";
   return (
-    <Card onClick={!isDisabled ? onClick : undefined} className={cn("flex flex-col items-center justify-center gap-4 p-8 aspect-square rounded-[3rem] border-4 bg-white shadow-2xl transition-all duration-500 relative overflow-hidden group", !isDisabled ? `hover:border-${color}-200 hover:-translate-y-4 cursor-pointer` : "opacity-60 bg-slate-50 cursor-not-allowed")}>
+    <Card onClick={!isDisabled ? onClick : undefined} className={cn("flex flex-col items-center justify-center gap-4 p-8 aspect-square rounded-[3rem] border-4 bg-white shadow-2xl transition-all duration-500 relative overflow-hidden group", !isDisabled ? `hover:border-${color}-200 hover:-translate-y-4 hover:shadow-${color}-500/10 cursor-pointer` : "opacity-60 bg-slate-50 cursor-not-allowed")}>
       {isDisabled && <div className="absolute inset-0 z-20 bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center"><TriangleAlert className="w-10 h-10 text-amber-600 mb-3" /><p className="text-[11px] font-black text-amber-700 uppercase tracking-widest">{customMessage || "Sospeso"}</p></div>}
-      <div className={cn("w-24 h-24 rounded-[2rem] bg-slate-50 flex items-center justify-center text-slate-400 transition-all duration-500", !isDisabled && `group-hover:bg-${color}-50 group-hover:text-${color}-600`)}><div className="transform group-hover:scale-110 transition-transform">{info.icon}</div></div>
+      <div className={cn("w-24 h-24 rounded-[2rem] bg-slate-50 flex items-center justify-center text-slate-400 transition-all duration-500", !isDisabled && `group-hover:bg-${color}-50 group-hover:text-${color}-600`)}>
+        <motion.div whileHover={{ rotate: 15, scale: 1.2 }}>{info.icon}</motion.div>
+      </div>
       <div className="text-center space-y-1.5"><span className={cn("text-base font-black text-slate-900 uppercase tracking-tighter leading-none block", !isDisabled && `group-hover:text-${color}-700`)}>{info.label}</span><p className="text-[10px] font-medium text-slate-400 leading-tight opacity-80">{info.description}</p></div>
+      {!isDisabled && (
+        <div className={cn("absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent transform translate-y-2 group-hover:translate-y-0 transition-transform", type === ServiceType.URGENT && "via-red-500")} />
+      )}
     </Card>
   );
 }
