@@ -51,8 +51,8 @@ export function MasterStatusProvider({ children }: { children: React.ReactNode }
              SISTEMA OFFLINE - IL MASTER BLACKVIEW NON È CONNESSO - I DATI NON SONO SINCRONIZZATI
           </div>
           
-          <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
-            <div className="bg-slate-900/90 text-white px-12 py-8 rounded-[3rem] border border-white/5 shadow-2xl backdrop-blur-md transform -rotate-2 animate-in zoom-in-95 duration-700">
+          <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-auto bg-black/60">
+            <div className="bg-slate-900/90 text-white px-12 py-8 rounded-[3rem] border border-white/5 shadow-2xl backdrop-blur-md transform -rotate-2 animate-in zoom-in-95 duration-700 pointer-events-auto">
               <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-slate-300 to-slate-500 drop-shadow-2xl flex items-center gap-4">
                 <AlertTriangle className="w-16 h-16 md:w-24 md:h-24 text-slate-400" />
                 MANUTENZIONE
