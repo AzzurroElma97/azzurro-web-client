@@ -17,7 +17,9 @@ import {
   Lock,
   Phone,
   ArrowLeft,
-  Zap
+  Zap,
+  Share2,
+  Link as LinkIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -268,6 +270,34 @@ export default function AdminPage() {
                       href="/admin/support"
                       color="bg-red-100 text-red-600"
                     />
+                    
+                    {/* Shareable Link Card */}
+                    <Card className="h-full hover:shadow-md transition-all rounded-2xl border-none shadow-sm overflow-hidden cursor-pointer group" onClick={() => {
+                        const url = window.location.origin;
+                        if (navigator.share) {
+                            navigator.share({
+                                title: 'Azzurro Community Ride',
+                                text: 'Prenota il tuo passaggio con Azzurro!',
+                                url: url,
+                            }).catch(console.error);
+                        } else {
+                            navigator.clipboard.writeText(url);
+                            alert("Link copiato negli appunti: " + url);
+                        }
+                    }}>
+                      <CardContent className="flex flex-col p-8 h-full">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 bg-pink-100 text-pink-600">
+                            <Share2 className="h-6 w-6" />
+                        </div>
+                        <div className="space-y-2 flex-1">
+                            <p className="font-bold text-slate-900 text-xl">Condividi Sito</p>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">Copia o condividi il link pubblico per far prenotare i clienti.</p>
+                        </div>
+                        <div className="mt-8 flex items-center text-xs font-bold text-pink-600 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
+                            Condividi <LinkIcon className="ml-1 h-3 w-3" />
+                        </div>
+                      </CardContent>
+                    </Card>
                 </div>
 
                 <div className="pt-10 text-center border-t border-slate-200">

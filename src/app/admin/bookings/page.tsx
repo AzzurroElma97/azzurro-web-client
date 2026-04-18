@@ -70,6 +70,10 @@ export default function ManageBookingsPage() {
   // Inline Delete protection states
   const [confirmingTableDeleteId, setConfirmingTableDeleteId] = useState<string | null>(null);
   const [tableDeleteCountdown, setTableDeleteCountdown] = useState(10);
+  
+  // Filters
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterInsertDate, setFilterInsertDate] = useState('');
 
   useEffect(() => {
     const adminAuth = localStorage.getItem('isAdminAuthenticated');
@@ -83,7 +87,7 @@ export default function ManageBookingsPage() {
   useEffect(() => {
     if (isAuthenticated) {
       // Semplificato per usare il nuovo socketService Titanium
-      socketService.emit('process_request', { action: 'GET_ALL_DATA_FOR_BOOKINGS' }, (res: any) => {
+      socketService.emit('client_request', { action: 'GET_ALL_DATA_FOR_BOOKINGS' }, (res: any) => {
           if (res && res.success) {
             setBookings(res.bookings || []);
             setDrivers(res.drivers || []);
@@ -91,6 +95,18 @@ export default function ManageBookingsPage() {
           }
           setIsLoading(false);
       });
+
+      const handleEliminazione = (data: any) => {
+          if (data && data.rideId) {
+             setBookings(prev => prev.filter(b => b.id !== data.rideId && b.ticket_id !== data.rideId));
+          }
+      };
+      
+      socketService.on('nuova_eliminazione', handleEliminazione);
+      
+      return () => {
+         socketService.off('nuova_eliminazione');
+      };
     }
   }, [isAuthenticated]);
 
@@ -107,7 +123,7 @@ export default function ManageBookingsPage() {
     e.preventDefault();
     setIsLoggingIn(true);
 
-    socketService.emit('process_request', { 
+    socketService.emit('client_request', { 
       action: 'LOGIN_ADMIN', 
       email, 
       password 
@@ -124,7 +140,7 @@ export default function ManageBookingsPage() {
   };
 
   const handleDelete = (id: string) => {
-    socketService.emit('process_request', { action: 'DELETE_RIDE', payload: { rideId: id } }, (res: any) => {
+    socketService.emit('client_request', { action: 'DELETE_RIDE', payload: { rideId: id } }, (res: any) => {
         toast({ title: "Prenotazione eliminata" });
         setBookings(prev => prev.filter(b => b.id !== id));
         if (selectedBooking?.id === id) setSelectedBooking(null);
@@ -132,8 +148,19 @@ export default function ManageBookingsPage() {
     });
   };
 
-  const activeBookings = useMemo(() => bookings?.filter(b => b.status !== 'ARCHIVED' && b.status !== 'CANCELLED') || [], [bookings]);
-  const archivedBookings = useMemo(() => bookings?.filter(b => b.status === 'ARCHIVED' || b.status === 'CANCELLED') || [], [bookings]);
+  const activeBookings = useMemo(() => {
+     let filtered = bookings?.filter(b => b.status !== 'ARCHIVED' && b.status !== 'CANCELLED') || [];
+     if (filterStartDate) filtered = filtered.filter(b => (b.data_partenza || b.date) === filterStartDate);
+     if (filterInsertDate) filtered = filtered.filter(b => b.created_at?.startsWith(filterInsertDate));
+     return filtered;
+  }, [bookings, filterStartDate, filterInsertDate]);
+  
+  const archivedBookings = useMemo(() => {
+     let filtered = bookings?.filter(b => b.status === 'ARCHIVED' || b.status === 'CANCELLED') || [];
+     if (filterStartDate) filtered = filtered.filter(b => (b.data_partenza || b.date) === filterStartDate);
+     if (filterInsertDate) filtered = filtered.filter(b => b.created_at?.startsWith(filterInsertDate));
+     return filtered;
+  }, [bookings, filterStartDate, filterInsertDate]);
 
   const oldestVersionId = useMemo(() => {
     if (!history || history.length === 0) return null;
@@ -145,7 +172,7 @@ export default function ManageBookingsPage() {
     const isCurrentlyArchived = bookingToArchive?.status === 'ARCHIVED';
     const newStatus = isCurrentlyArchived ? 'PENDING' : 'ARCHIVED';
 
-    socketService.emit('process_request', { action: 'UPDATE_RIDE_STATUS', payload: { rideId: id, status: newStatus } }, (res: any) => {
+    socketService.emit('client_request', { action: 'UPDATE_RIDE_STATUS', payload: { rideId: id, status: newStatus } }, (res: any) => {
         toast({ 
           title: isCurrentlyArchived ? "Ripristinata" : "Archiviata", 
           description: isCurrentlyArchived ? "La corsa è tornata tra le attive." : "La corsa è stata spostata nell'archivio." 
@@ -172,7 +199,7 @@ export default function ManageBookingsPage() {
     setConfirmingTableDeleteId(null);
 
     // Fetch history via socket
-    socketService.emit('process_request', { action: 'GET_RIDE_HISTORY', payload: { rideId: booking.id } }, (res: any) => {
+    socketService.emit('client_request', { action: 'GET_RIDE_HISTORY', payload: { rideId: booking.id } }, (res: any) => {
         setHistory(res?.payload || []);
     });
   };
@@ -181,7 +208,7 @@ export default function ManageBookingsPage() {
     if (!selectedBooking || !editData) return;
     setIsSaving(true);
 
-    socketService.emit('process_request', { 
+    socketService.emit('client_request', { 
         action: 'UPDATE_RIDE_DETAILS', 
         payload: { rideId: selectedBooking.id, data: editData } 
     }, (res: any) => {
@@ -201,7 +228,7 @@ export default function ManageBookingsPage() {
     if (!confirm("Ripristinare questa versione della prenotazione?")) return;
 
     setIsSaving(true);
-    socketService.emit('process_request', { action: 'REVERT_RIDE_VERSION', payload: { rideId: selectedBooking.id, versionId: historicalData.id } }, (res: any) => {
+    socketService.emit('client_request', { action: 'REVERT_RIDE_VERSION', payload: { rideId: selectedBooking.id, versionId: historicalData.id } }, (res: any) => {
         if (res && res.success) {
             const cleanData = res.payload;
             toast({ title: "Versione Ripristinata", description: "La prenotazione è tornata allo stato precedente." });
@@ -216,7 +243,7 @@ export default function ManageBookingsPage() {
   const handleDeleteHistoryEntry = (historyId: string) => {
     if (!selectedBooking) return;
     
-    socketService.emit('process_request', { action: 'DELETE_RIDE_HISTORY', payload: { rideId: selectedBooking.id, historyId } }, (res: any) => {
+    socketService.emit('client_request', { action: 'DELETE_RIDE_HISTORY', payload: { rideId: selectedBooking.id, historyId } }, (res: any) => {
         toast({ title: "Versione eliminata" });
         setHistory(prev => prev.filter(h => h.id !== historyId));
     });
@@ -294,6 +321,22 @@ export default function ManageBookingsPage() {
       </div>
 
       <div className="w-full">
+        <Card className="mb-6 border-none shadow-sm rounded-2xl bg-white p-4 flex flex-col md:flex-row gap-4">
+            <div className="flex-1 space-y-1">
+                <Label className="text-[10px] font-black uppercase text-slate-400">Filtra per Data Corsa</Label>
+                <Input type="date" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} className="h-10 rounded-xl" />
+            </div>
+            <div className="flex-1 space-y-1">
+                <Label className="text-[10px] font-black uppercase text-slate-400">Filtra per Inserimento</Label>
+                <Input type="date" value={filterInsertDate} onChange={e => setFilterInsertDate(e.target.value)} className="h-10 rounded-xl" />
+            </div>
+            {(filterStartDate || filterInsertDate) && (
+                <div className="flex items-end">
+                    <Button variant="ghost" onClick={() => {setFilterStartDate(''); setFilterInsertDate('');}} className="h-10 rounded-xl text-red-500 hover:bg-red-50">Reset Filtri</Button>
+                </div>
+            )}
+        </Card>
+      
         <Tabs defaultValue="active" className="w-full space-y-6">
             <div className="flex items-center justify-between px-1">
                 <TabsList className="bg-slate-100 p-1 rounded-xl h-11">
@@ -443,15 +486,15 @@ function BookingTable({
                         </TableCell>
                         <TableCell className="text-left">
                             <div className="flex flex-col text-xs font-bold text-slate-600">
-                                <span className="flex items-center gap-1">{booking.date}</span>
-                                <span className="text-slate-400">{booking.time}</span>
+                                <span className="flex items-center gap-1">{booking.data_partenza || booking.date}</span>
+                                <span className="text-slate-400">{booking.ora_partenza || booking.time}</span>
                             </div>
                         </TableCell>
                         <TableCell className="text-left">
                             <div className="flex flex-col max-w-[180px]">
-                                <span className="text-[10px] truncate font-medium text-slate-500">{booking.origin}</span>
+                                <span className="text-[10px] truncate font-medium text-slate-500">{booking.partenza_indirizzo || booking.origin}</span>
                                 <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] truncate font-black text-slate-900">{booking.destination}</span>
+                                    <span className="text-[10px] truncate font-black text-slate-900">{booking.destinazione_indirizzo || booking.destination}</span>
                                     {booking.intermediateStops && booking.intermediateStops.length > 0 && (
                                         <Badge variant="outline" className="h-3.5 px-1 text-[7px] font-black border-blue-100 bg-blue-50 text-blue-600 uppercase">
                                             +{booking.intermediateStops.length} Tappe

@@ -84,3 +84,15 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+/* Modalità Offline (Grayscale) */
+.offline-mode {
+  filter: grayscale(100%);
+  transition: filter 0.5s ease-in-out;
+}
+
+/* Modalità Online (Colori normali) */
+.online-mode {
+  filter: grayscale(0%);
+  transition: filter 0.5s ease-in-out;
+}

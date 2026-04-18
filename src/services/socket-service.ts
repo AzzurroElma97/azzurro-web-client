@@ -15,12 +15,49 @@ class SocketService {
 
       this.socket.on('connect', () => {
         console.log('📡 Connesso al Relay Broker Titanium');
+        this.checkMasterPresence();
       });
 
       this.socket.on('disconnect', () => {
         console.log('🔴 Disconnesso dal Relay');
+        this.setMasterOnline(false);
       });
+
+      this.socket.on('master_presence', (data: { online: boolean }) => {
+        this.setMasterOnline(data.online);
+      });
+
+      // Poll periodico se il relay non pusha
+      setInterval(() => this.checkMasterPresence(), 30000);
     }
+  }
+
+  private masterOnline: boolean = true; // Default true per evitare flash su caricamento
+  private statusListeners: ((status: boolean) => void)[] = [];
+
+  private setMasterOnline(status: boolean) {
+    if (this.masterOnline !== status) {
+      this.masterOnline = status;
+      this.statusListeners.forEach(cb => cb(status));
+    }
+  }
+
+  private async checkMasterPresence() {
+    this.emit('client_request', { action: 'PING' }, (res: any) => {
+        this.setMasterOnline(!!res?.success);
+    }, 5000); // 5s timeout per il ping
+  }
+
+  public subscribeStatus(callback: (status: boolean) => void) {
+    this.statusListeners.push(callback);
+    callback(this.masterOnline);
+    return () => {
+      this.statusListeners = this.statusListeners.filter(cb => cb !== callback);
+    };
+  }
+
+  public isMasterOnline() {
+    return this.masterOnline;
   }
 
   public on(event: string, callback: (data: any) => void) {
