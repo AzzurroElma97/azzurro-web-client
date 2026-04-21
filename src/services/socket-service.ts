@@ -15,6 +15,12 @@ class SocketService {
 
       this.socket.on('connect', () => {
         console.log('📡 Connesso al Relay Broker Titanium');
+        // Identificazione per ottenere lo stato iniziale
+        this.socket?.emit('identify', {}, (res: any) => {
+           if (res && res.success) {
+              this.setMasterOnline(!!res.isServerOnline);
+           }
+        });
         this.checkMasterPresence();
       });
 
