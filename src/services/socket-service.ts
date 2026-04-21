@@ -23,7 +23,7 @@ class SocketService {
         this.setMasterOnline(false);
       });
 
-      this.socket.on('master_presence', (data: { online: boolean }) => {
+      this.socket.on('server_status', (data: { online: boolean }) => {
         this.setMasterOnline(data.online);
       });
 
@@ -32,7 +32,7 @@ class SocketService {
     }
   }
 
-  private masterOnline: boolean = true; // Default true per evitare flash su caricamento
+  private masterOnline: boolean = false; // Default false per riflettere lo stato reale al caricamento
   private statusListeners: ((status: boolean) => void)[] = [];
 
   private setMasterOnline(status: boolean) {
