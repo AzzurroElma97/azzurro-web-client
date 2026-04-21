@@ -75,7 +75,7 @@ export default function AdminPage() {
     setIsAutoWaiting(true);
     setError('');
 
-    // Timeout ridotto a 15 secondi come richiesto
+    // Timeout aumentato a 30 secondi per dare tempo di agire sul Master
     socketService.emit('client_request', {
       action: 'REQUEST_AUTO_LOGIN',
       device: typeof window !== 'undefined' ? navigator.userAgent : 'Unknown Web Client'
@@ -87,12 +87,12 @@ export default function AdminPage() {
         localStorage.setItem('adminEmail', 'AUTO_LOGIN');
       } else {
         if (res?.message === 'TIMEOUT_EXCEEDED') {
-          setError('Tempo scaduto! Assicurati di accettare la richiesta sul Blackview entro 15 secondi.');
+          setError('Tempo scaduto! Assicurati di accettare la richiesta sul Blackview entro 30 secondi.');
         } else {
           setError(res?.message || 'Accesso automatico rifiutato dal Master.');
         }
       }
-    }, 15000); 
+    }, 30000); 
   };
 
   const handleLogout = () => {
