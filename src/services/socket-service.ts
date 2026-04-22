@@ -34,7 +34,7 @@ class SocketService {
       });
 
       // Poll periodico se il relay non pusha
-      setInterval(() => this.checkMasterPresence(), 30000);
+      setInterval(() => this.checkMasterPresence(), 15000);
     }
   }
 
