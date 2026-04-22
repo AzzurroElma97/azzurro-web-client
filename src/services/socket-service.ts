@@ -33,6 +33,11 @@ class SocketService {
         this.setMasterOnline(data.online);
       });
 
+      this.socket.on('master_ready_sync', () => {
+        console.log('🔄 Master segnala rientro online. Sincronizzazione forzata.');
+        this.setMasterOnline(true);
+      });
+
       // Poll periodico se il relay non pusha
       setInterval(() => this.checkMasterPresence(), 15000);
     }
