@@ -23,6 +23,7 @@ export default function Header() {
   const [isDriver, setIsDriver] = useState(false);
   const [isCustomer, setIsCustomer] = useState(false);
   const [userName, setUserName] = useState('');
+  const [isMasterOnline, setIsMasterOnline] = useState(false);
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<any>(null);
 
@@ -31,7 +32,14 @@ export default function Header() {
     setIsDriver(localStorage.getItem('isDriverAuthenticated') === 'true');
     setIsCustomer(localStorage.getItem('isCustomerAuthenticated') === 'true');
     setUserName(localStorage.getItem('userName') || 'Utente');
+    
+    // Sottoscrizione allo stato del Master
+    const unsubscribe = socketService.subscribeStatus((status) => {
+      setIsMasterOnline(status);
+    });
+
     setLoading(false);
+    return () => unsubscribe();
   }, []);
 
   const handleLogout = () => {
@@ -73,11 +81,25 @@ export default function Header() {
           )}
         </Link>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
+          {/* Indicatore Stato Master */}
+          <div className={cn(
+            "hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all",
+            isMasterOnline 
+              ? "bg-emerald-50 border-emerald-100 text-emerald-600 shadow-sm shadow-emerald-500/10" 
+              : "bg-slate-50 border-slate-200 text-slate-400"
+          )}>
+            <div className={cn(
+              "w-2 h-2 rounded-full",
+              isMasterOnline ? "bg-emerald-500 animate-pulse" : "bg-slate-300"
+            )} />
+            {isMasterOnline ? "Titanium Link Active" : "Master Offline"}
+          </div>
+
           {!loading && isLoggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 overflow-hidden border">
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 overflow-hidden border hover:border-blue-200 transition-colors">
                   <Avatar className="h-full w-full">
                     <AvatarFallback className={isAdmin ? "bg-amber-100 text-amber-700 font-black" : (isDriver ? "bg-emerald-100 text-emerald-700 font-black" : "bg-blue-50 text-blue-600 font-bold")}>
                       {initial}
@@ -85,7 +107,7 @@ export default function Header() {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 mt-2 rounded-xl" align="end">
+              <DropdownMenuContent className="w-56 mt-2 rounded-xl border-slate-200" align="end">
                 <DropdownMenuLabel className="font-bold text-xs text-slate-500">MIO ACCOUNT</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <div className="px-2 py-1.5">
@@ -126,7 +148,7 @@ export default function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : !loading && (
-            <Link href="/login" className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors">
+            <Link href="/login" className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-blue-600 transition-all hover:translate-x-1">
               <ArrowRightToLine className="h-4 w-4" />
               Area Riservata
             </Link>
