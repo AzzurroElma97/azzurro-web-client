@@ -87,12 +87,12 @@ export default function AdminPage() {
         localStorage.setItem('adminEmail', 'AUTO_LOGIN');
       } else {
         if (res?.message === 'TIMEOUT_EXCEEDED') {
-          setError('Tempo scaduto! Assicurati di accettare la richiesta sul Blackview entro 50 secondi.');
+          setError('Tempo scaduto! Non è stata ricevuta alcuna autorizzazione dal Blackview entro 15 secondi.');
         } else {
           setError(res?.message || 'Accesso automatico rifiutato dal Master.');
         }
       }
-    }, 50000); 
+    }, 15000); 
   };
 
   const handleLogout = () => {
@@ -171,7 +171,7 @@ export default function AdminPage() {
               {isAutoWaiting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Attesa Master (50s)...
+                  Attesa Master (15s)...
                 </>
               ) : (
                 <>
