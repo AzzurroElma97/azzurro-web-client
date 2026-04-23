@@ -16,6 +16,7 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { socketService } from '@/services/socket-service';
+import { cn } from '@/lib/utils';
 
 export default function Header() {
   const router = useRouter();
