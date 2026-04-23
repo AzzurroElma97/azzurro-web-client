@@ -38,8 +38,8 @@ class SocketService {
         this.setMasterOnline(true);
       });
 
-      // Poll periodico se il relay non pusha
-      setInterval(() => this.checkMasterPresence(), 15000);
+      // Poll periodico se il relay non pusha (allineato alla nuova tolleranza di 90s)
+      setInterval(() => this.checkMasterPresence(), 25000);
     }
   }
 
