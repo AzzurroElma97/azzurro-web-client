@@ -53,6 +53,10 @@ class SocketService {
     }
   }
 
+  public login(data: any, callback: (res: any) => void) {
+    this.emit('client_request', { action: 'LOGIN_USER', ...data }, callback, 20000);
+  }
+
   private async checkMasterPresence() {
     this.emit('client_request', { action: 'PING' }, (res: any) => {
         // Se res.success è vero, il master è online o in grace period

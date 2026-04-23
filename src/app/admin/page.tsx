@@ -55,10 +55,10 @@ export default function AdminPage() {
     setError('');
 
     // RICHIESTA AL BLACKVIEW MASTER SERVER TRAMITE RELAY
-    socketService.emit('client_request', { 
-      action: 'LOGIN_ADMIN', 
-      email, 
-      password 
+    socketService.login({
+      type: 'ADMIN',
+      email,
+      password
     }, (res: any) => {
       setIsLoading(false);
       if (res && res.success) {
@@ -66,7 +66,7 @@ export default function AdminPage() {
         localStorage.setItem('isAdminAuthenticated', 'true');
         localStorage.setItem('adminEmail', email);
       } else {
-        setError(res?.message || 'Credenziali non valide. Accesso negato.');
+        setError(res?.message || 'Credenziali Admin errate.');
       }
     });
   };

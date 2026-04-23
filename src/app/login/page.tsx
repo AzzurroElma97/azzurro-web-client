@@ -38,18 +38,16 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
 
-    const action = userType === 'customer' ? 'LOGIN_CUSTOMER' : 'LOGIN_DRIVER';
-
-    socketService.emit('client_request', {
-      action,
-      email: userType === 'customer' ? identifier : undefined,
-      identifier: userType === 'driver' ? identifier : undefined,
+    socketService.login({
+      type: userType === 'customer' ? 'CUSTOMER' : 'DRIVER',
+      email: method === 'email' ? identifier : undefined,
+      telefono: method === 'phone' ? identifier : undefined,
       password
     }, (res: any) => {
       setIsLoading(false);
       if (res && res.success) {
         if (userType === 'customer') {
-          if (res.customer.reset_required) {
+          if (res.customer?.reset_required) {
             router.push(`/change-password?id=${res.customer.id}&type=CUSTOMER`);
             return;
           }
@@ -57,7 +55,7 @@ export default function LoginPage() {
           localStorage.setItem('customerData', JSON.stringify(res.customer));
           router.push('/customer/dashboard');
         } else {
-          if (res.driver.reset_required) {
+          if (res.driver?.reset_required) {
             router.push(`/change-password?id=${res.driver.id}&type=DRIVER`);
             return;
           }
