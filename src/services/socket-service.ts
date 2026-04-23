@@ -55,8 +55,9 @@ class SocketService {
 
   private async checkMasterPresence() {
     this.emit('client_request', { action: 'PING' }, (res: any) => {
+        // Se res.success è vero, il master è online o in grace period
         this.setMasterOnline(!!res?.success);
-    }, 5000); // 5s timeout per il ping
+    }, 10000); // 10s timeout per il ping di controllo
   }
 
   public subscribeStatus(callback: (status: boolean) => void) {
