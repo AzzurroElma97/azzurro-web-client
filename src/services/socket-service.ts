@@ -38,9 +38,37 @@ class SocketService {
         this.setMasterOnline(true);
       });
 
+      this.socket.on('forza_logout', (data: { userId?: number, type?: string, email?: string }) => {
+        console.log('🚫 Ricevuta richiesta di Logout Forzato dal Master.');
+        
+        // Se non ci sono dati specifici, slogga tutti (es. reset admin globale)
+        // Se ci sono dati, controlla se corrispondono all'utente attuale
+        const isAdmin = localStorage.getItem('isAdminAuthenticated') === 'true';
+        const customerData = JSON.parse(localStorage.getItem('customerData') || '{}');
+        const driverData = JSON.parse(localStorage.getItem('driverData') || '{}');
+
+        if (!data.userId || 
+            (data.type === 'ADMIN' && isAdmin) || 
+            (data.type === 'CUSTOMER' && customerData.id === data.userId) ||
+            (data.type === 'DRIVER' && driverData.id === data.userId)) {
+          
+          this.performGlobalLogout();
+        }
+      });
+
       // Poll periodico se il relay non pusha (allineato alla nuova tolleranza di 90s)
       setInterval(() => this.checkMasterPresence(), 25000);
     }
+  }
+
+  private performGlobalLogout() {
+    localStorage.removeItem('isAdminAuthenticated');
+    localStorage.removeItem('isCustomerAuthenticated');
+    localStorage.removeItem('isDriverAuthenticated');
+    localStorage.removeItem('customerData');
+    localStorage.removeItem('driverData');
+    localStorage.removeItem('adminEmail');
+    window.location.href = '/login';
   }
 
   private masterOnline: boolean = false; // Default false per riflettere lo stato reale al caricamento
