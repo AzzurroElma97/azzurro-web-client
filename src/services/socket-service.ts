@@ -2,7 +2,7 @@ import { io, Socket } from 'socket.io-client';
 
 class SocketService {
   private socket: Socket | null = null;
-  private readonly RELAY_URL = 'http://localhost:3000'; // Test Locale Titanium v3.0
+  private readonly RELAY_URL = 'http://192.168.1.231:3000'; // Test Locale Titanium v3.0
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -89,7 +89,22 @@ class SocketService {
     }, (res) => {
       console.log("📩 Risposta Login dal Master:", res);
       callback(res);
-    }, 30000); // Aumentato a 30s
+    }, 30000);
+  }
+
+  public reportError(message: string, context: string = 'SITO', details?: any) {
+    const payload = {
+      action: 'SITE_ERROR_REPORT',
+      errorMessage: message,
+      errorContext: context,
+      errorDetails: details ? JSON.stringify(details).substring(0, 500) : null,
+      pageUrl: typeof window !== 'undefined' ? window.location.pathname : 'SSR',
+      timestamp: new Date().toISOString(),
+      userAgent: typeof window !== 'undefined' ? navigator.userAgent.substring(0, 100) : 'N/A',
+    };
+    // Non-blocking: inviamo senza aspettare risposta
+    this.emit('client_request', payload);
+    console.warn(`📡 [TITANIUM] Errore segnalato al Blackview: [${context}] ${message}`);
   }
 
   private async checkMasterPresence() {
@@ -127,25 +142,51 @@ class SocketService {
     if (this.socket) {
       if (timeoutMs > 0 && callback) {
         let called = false;
+        const expectedResponseAction = `${data.action}_RESPONSE`;
+
+        // Timer di timeout
         const timer = setTimeout(() => {
           if (!called) {
             called = true;
-            callback({ success: false, message: 'TIMEOUT_EXCEEDED', error: `Il server Master non ha risposto entro ${timeoutMs/1000}s.` });
+            this.socket?.off('master_direct_response', handleDirectResponse);
+            callback({ success: false, message: 'TIMEOUT', error: `Il Blackview non ha risposto entro ${timeoutMs/1000}s.` });
           }
         }, timeoutMs);
 
-        this.socket.emit(event, data, (res: any) => {
-          if (!called) {
+        // Canale PRIMARIO: ascolto evento diretto (funziona sempre anche senza ack RN)
+        const handleDirectResponse = (res: any) => {
+          if (res.action === expectedResponseAction && !called) {
             called = true;
             clearTimeout(timer);
-            callback(res);
+            this.socket?.off('master_direct_response', handleDirectResponse);
+            callback(res.payload ?? res);
+          }
+        };
+        this.socket.on('master_direct_response', handleDirectResponse);
+
+        // Canale SECONDARIO: ack socket.io standard (ignoriamo se è un oggetto vuoto da bug RN)
+        this.socket.emit(event, data, (res: any) => {
+          if (!called) {
+            // Fix per il bug di React Native che restituisce {} nell'ACK
+            const isEmptyObject = res && typeof res === 'object' && Object.keys(res).length === 0;
+            if (!isEmptyObject) {
+              called = true;
+              clearTimeout(timer);
+              this.socket?.off('master_direct_response', handleDirectResponse);
+              callback(res);
+            } else {
+              console.warn("⚠️ Ignorata risposta ACK vuota dal Master. Attendo canale diretto...");
+            }
           }
         });
+
       } else {
+        // Fire-and-forget (nessuna callback)
         this.socket.emit(event, data, callback);
       }
     } else {
       console.warn('⚠️ Socket non inizializzato');
+      if (callback) callback({ success: false, message: 'Connessione non disponibile.' });
     }
   }
 

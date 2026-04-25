@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Mail, 
@@ -33,40 +33,56 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
+  useEffect(() => {
+    const isCust = localStorage.getItem('isCustomerAuthenticated') === 'true';
+    const isDriver = localStorage.getItem('isDriverAuthenticated') === 'true';
+    if (isCust) router.push('/customer/dashboard');
+    else if (isDriver) router.push('/driver');
+  }, [router]);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
+    // Riconosce automaticamente se hai inserito una mail o un telefono dal formato
+    const isPhone = /^\+?[0-9\s\-]+$/.test(identifier);
+
     socketService.login({
-      type: userType === 'customer' ? 'CUSTOMER' : 'DRIVER',
-      email: method === 'email' ? identifier : undefined,
-      telefono: method === 'phone' ? identifier : undefined,
+      type: 'CUSTOMER', // Invia sempre come customer, il database Master cercherà in entrambe le tabelle!
+      email: !isPhone ? identifier : undefined,
+      telefono: isPhone ? identifier : undefined,
       password
     }, (res: any) => {
       setIsLoading(false);
       if (res && res.success) {
-        if (userType === 'customer') {
+        // Il backend restituisce il tipo effettivo (actual_type: 'DRIVER' o 'CUSTOMER')
+        const actualType = res.customer?.actual_type || 'CUSTOMER';
+
+        if (actualType === 'CUSTOMER') {
           if (res.customer?.reset_required) {
             router.push(`/change-password?id=${res.customer.id}&type=CUSTOMER`);
             return;
           }
           localStorage.setItem('isCustomerAuthenticated', 'true');
           localStorage.setItem('customerData', JSON.stringify(res.customer));
+          localStorage.setItem('userName', res.customer.nome);
           router.push('/customer/dashboard');
         } else {
-          if (res.driver?.reset_required) {
-            router.push(`/change-password?id=${res.driver.id}&type=DRIVER`);
+          // E' un Driver!
+          if (res.customer?.reset_required) {
+            router.push(`/change-password?id=${res.customer.id}&type=DRIVER`);
             return;
           }
           localStorage.setItem('isDriverAuthenticated', 'true');
-          localStorage.setItem('driverData', JSON.stringify(res.driver));
+          localStorage.setItem('driverData', JSON.stringify(res.customer));
+          localStorage.setItem('userName', res.customer.nome);
           router.push('/driver');
         }
       } else {
         const errorMsg = res?.message || res?.error || 'Errore imprevisto durante il login.';
         console.error("❌ Errore Login ricevuto:", res);
-        setError(errorMsg === 'TIMEOUT_EXCEEDED' ? 'Il Master Server è lento a rispondere. Riprova.' : errorMsg);
+        setError(errorMsg.includes('TIMEOUT') ? 'Il Master Server (Blackview) non risponde. Verifica che sia Online.' : errorMsg);
       }
     });
   };
@@ -87,57 +103,22 @@ export default function LoginPage() {
             <p className="text-slate-500 font-medium italic">Seleziona il tuo profilo</p>
           </div>
 
-          {/* User Type Switcher */}
-          <div className="flex p-1.5 bg-slate-100 rounded-3xl">
-            <button 
-              onClick={() => { setUserType('customer'); setMethod('email'); }}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-bold transition-all",
-                userType === 'customer' ? "bg-white text-blue-600 shadow-xl" : "text-slate-500 hover:text-slate-700"
-              )}
-            >
-              <Users className="w-5 h-5" /> Passeggero
-            </button>
-            <button 
-              onClick={() => setUserType('driver')}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-bold transition-all",
-                userType === 'driver' ? "bg-white text-blue-600 shadow-xl" : "text-slate-500 hover:text-slate-700"
-              )}
-            >
-              <Car className="w-5 h-5" /> Driver
-            </button>
-          </div>
-
-          {/* Autista Hybrid Choice */}
-          {userType === 'driver' && (
-            <div className="flex justify-center gap-6">
-              <button 
-                onClick={() => setMethod('email')}
-                className={cn("text-xs font-black uppercase tracking-widest pb-1 border-b-2 transition-all", 
-                  method === 'email' ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400")}
-              >
-                Email
-              </button>
-              <button 
-                onClick={() => setMethod('phone')}
-                className={cn("text-xs font-black uppercase tracking-widest pb-1 border-b-2 transition-all", 
-                  method === 'phone' ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400")}
-              >
-                Telefono
-              </button>
+          {/* Unified Login Header */}
+          <div className="flex justify-center">
+            <div className="px-6 py-2 bg-slate-100 rounded-full font-bold text-slate-500 flex items-center gap-2">
+              <Users className="w-4 h-4" /> Passeggero / Driver
             </div>
-          )}
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-4">
               <div className="relative group">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">
-                  {method === 'email' ? <Mail className="w-5 h-5" /> : <Smartphone className="w-5 h-5" />}
+                  <Mail className="w-5 h-5" />
                 </div>
                 <Input 
-                  type={method === 'email' ? 'email' : 'text'}
-                  placeholder={method === 'email' ? 'La tua Email' : 'Il tuo Telefono (es. +39...)'}
+                  type="text"
+                  placeholder="La tua Email o Telefono"
                   className="h-15 pl-12 rounded-2xl border-slate-100 bg-slate-50 focus:bg-white text-lg font-medium"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
@@ -151,7 +132,7 @@ export default function LoginPage() {
                 </div>
                 <Input 
                   type="password"
-                  placeholder={method === 'email' ? 'Password Segreta' : 'PIN Accesso'}
+                  placeholder="Password Segreta"
                   className="h-15 pl-12 rounded-2xl border-slate-100 bg-slate-50 focus:bg-white text-lg font-medium"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

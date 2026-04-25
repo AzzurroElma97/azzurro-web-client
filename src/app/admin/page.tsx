@@ -119,7 +119,7 @@ export default function AdminPage() {
             setIsAuthenticated(true);
             setIsAutoWaiting(false);
             localStorage.setItem('isAdminAuthenticated', 'true');
-            localStorage.setItem('adminEmail', 'AUTO_LOGIN');
+            localStorage.setItem('adminEmail', res.payload?.email || 'creator.azzurro@gmail.com');
          }
       };
       

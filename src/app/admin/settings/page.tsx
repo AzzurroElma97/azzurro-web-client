@@ -42,18 +42,20 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      socketService.emit('client_request', { action: 'GET_SETTINGS' });
-      socketService.on('master_response', (res: any) => {
-        if (res.action === 'GET_SETTINGS') {
-          setLocalSettings(res.payload);
-          setSettingsLoading(false);
+      socketService.emit('client_request', { action: 'GET_SETTINGS' }, (res: any) => {
+        if (res && res.success) {
+           setLocalSettings(res.payload || res.settings);
+           setSettingsLoading(false);
+        } else {
+           toast({ 
+             title: "Errore caricamento", 
+             description: res?.message || "Il Master non ha risposto correttamente.",
+             variant: "destructive" 
+           });
         }
-      });
-      return () => {
-        socketService.off('master_response');
-      };
+      }, 15000); // 15s timeout
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, toast]);
 
   const handleSave = async () => {
     if (!localSettings) return;

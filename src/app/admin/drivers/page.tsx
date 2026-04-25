@@ -98,15 +98,19 @@ export default function ManageDriversPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      socketService.emit('process_request', { action: 'GET_DRIVERS_DATA' }, (res: any) => {
+      socketService.emit('client_request', { action: 'GET_ALL_DATA_FOR_BOOKINGS' }, (res: any) => {
           if (res && res.success) {
             setRawUsers(res.users || []);
             setDrivers(res.drivers || []);
             setAppSettings(res.settings || null);
+          } else {
+            // Fallback: prova solo la lista driver
+            setDrivers([]);
+            setRawUsers([]);
           }
           setIsLoading(false);
           setIsRefreshing(false);
-      });
+      }, 20000);
     }
   }, [isAuthenticated, refreshKey]);
 
@@ -127,7 +131,7 @@ export default function ManageDriversPage() {
     const tempPass = 'AzzurroTempo' + Math.floor(1000 + Math.random() * 9000);
     if (!confirm(`Vuoi resettare la password di ${nome}? Verrà impostata la password temporanea: ${tempPass}`)) return;
 
-    socketService.emit('process_request', { 
+    socketService.emit('client_request', { 
         action: 'RESET_PASSWORD', 
         type: type, 
         id: id, 
@@ -138,7 +142,7 @@ export default function ManageDriversPage() {
         } else {
             toast({ variant: "destructive", title: "Errore", description: "Impossibile resettare la password." });
         }
-    });
+    }, 15000);
   };
 
   const handleEditClick = (person: any, tab: string = "account") => {
@@ -167,42 +171,42 @@ export default function ManageDriversPage() {
   };
 
   const executeRevocation = async (personId: string) => {
-    socketService.emit('process_request', { action: 'REVOKE_DRIVER', payload: { userId: personId } }, (res: any) => {
+    socketService.emit('client_request', { action: 'REVOKE_DRIVER', payload: { userId: personId } }, (res: any) => {
       toast({ title: "Richiesta completata", description: "Revoca eseguita sul Master Server." });
       setConfirmingRevocationId(null);
       setRefreshKey(k => k + 1);
-    });
+    }, 15000);
   };
 
   const handleToggleApproval = async (personId: string, currentStatus: boolean) => {
-    socketService.emit('process_request', { 
+    socketService.emit('client_request', { 
         action: 'TOGGLE_DRIVER_APPROVAL', 
         payload: { userId: personId, status: !currentStatus } 
     }, (res: any) => {
       toast({ title: "Aggiornamento completato", description: "Database Master aggiornato." });
       setRefreshKey(k => k + 1);
-    });
+    }, 15000);
   };
 
   const handleSaveEdit = async () => {
     if (!selectedPerson) return;
-    socketService.emit('process_request', { 
+    socketService.emit('client_request', { 
         action: 'UPDATE_DRIVER_PROFILE', 
         payload: selectedPerson 
     }, (res: any) => {
       setIsEditDialogOpen(false);
       toast({ title: "Modifiche salvate", description: "Il profilo driver è stato aggiornato sul telefono." });
       setRefreshKey(k => k + 1);
-    });
+    }, 15000);
   };
 
   const handleDeleteUser = async (userId: string) => {
     if (!confirm("Eliminare definitivamente questo utente dal database del Blackview?")) return;
     
-    socketService.emit('process_request', { action: 'DELETE_USER', payload: { userId } }, (res: any) => {
+    socketService.emit('client_request', { action: 'DELETE_USER', payload: { userId } }, (res: any) => {
       toast({ title: "Utente rimosso", description: "Database Master aggiornato." });
       setRefreshKey(k => k + 1);
-    });
+    }, 15000);
   };
 
   if (isLoading && !isRefreshing) {
@@ -218,11 +222,14 @@ export default function ManageDriversPage() {
     return null;
   }
 
-  const people = (rawUsers || []).map(u => {
-      const driver = drivers?.find(d => d.userId === u.id || d.id === u.id);
+  const people = (rawUsers || []).map((u: any) => {
+      // Uniamo il profilo esteso del driver basandoci sull'email (per evitare collisioni di ID tra tabella Clienti e Autisti)
+      const driver = drivers?.find((d: any) => d.email === u.email);
       return { 
-        ...u, name: u.firstName ? `${u.firstName} ${u.lastName}` : (u.email?.split('@')[0] || 'Utente'), 
-        isDriver: !!driver, driverProfile: driver 
+        ...u, 
+        name: u.nome || (u.email?.split('@')[0] || 'Sconosciuto'), 
+        isDriver: u.type === 'DRIVER' || !!driver, 
+        driverProfile: driver || (u.type === 'DRIVER' ? u : null)
       };
   });
 

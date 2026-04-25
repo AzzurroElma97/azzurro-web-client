@@ -29,18 +29,25 @@ export default function Header() {
   const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
-    setIsAdmin(localStorage.getItem('isAdminAuthenticated') === 'true');
-    setIsDriver(localStorage.getItem('isDriverAuthenticated') === 'true');
-    setIsCustomer(localStorage.getItem('isCustomerAuthenticated') === 'true');
-    setUserName(localStorage.getItem('userName') || 'Utente');
+    const checkAuth = () => {
+      setIsAdmin(localStorage.getItem('isAdminAuthenticated') === 'true');
+      setIsDriver(localStorage.getItem('isDriverAuthenticated') === 'true');
+      setIsCustomer(localStorage.getItem('isCustomerAuthenticated') === 'true');
+      setUserName(localStorage.getItem('userName') || 'Utente');
+    };
+
+    checkAuth();
+    const interval = setInterval(checkAuth, 1000); // Controllo rapido per aggiornare UI post-login
     
-    // Sottoscrizione allo stato del Master
     const unsubscribe = socketService.subscribeStatus((status) => {
       setIsMasterOnline(status);
     });
 
     setLoading(false);
-    return () => unsubscribe();
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+    };
   }, []);
 
   const handleLogout = () => {
@@ -50,6 +57,9 @@ export default function Header() {
     localStorage.removeItem('userId');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userName');
+    localStorage.removeItem('customerData');
+    localStorage.removeItem('driverData');
+    localStorage.removeItem('adminEmail');
     setIsAdmin(false);
     setIsDriver(false);
     setIsCustomer(false);

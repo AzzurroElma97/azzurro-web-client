@@ -40,19 +40,24 @@ function ChangePasswordForm() {
     setIsLoading(true);
     setError('');
 
-    socketService.emit('process_request', {
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+      setError('Errore di connessione: timeout scaduto.');
+    }, 15000);
+
+    socketService.emit('client_request', {
       action: 'UPDATE_PASSWORD',
       id,
       type,
       newPass: newPassword
     }, (res: any) => {
-      setIsLoading(true);
+      clearTimeout(timeout);
+      setIsLoading(false);
       if (res && res.success) {
         setIsSuccess(true);
         setTimeout(() => router.push('/login'), 2000);
       } else {
         setError(res?.message || 'Errore durante l\'aggiornamento. Riprova.');
-        setIsLoading(false);
       }
     });
   };

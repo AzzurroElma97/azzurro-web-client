@@ -53,14 +53,14 @@ export default function AdminCalendarPage() {
     useEffect(() => {
         if (isAuthenticated) {
             setIsLoading(true);
-            socketService.emit('process_request', { action: 'GET_ALL_DATA_FOR_BOOKINGS' }, (res: any) => {
+            socketService.emit('client_request', { action: 'GET_ALL_DATA_FOR_BOOKINGS' }, (res: any) => {
                 if (res && res.success) {
                     setRides(res.bookings || []);
                     setDrivers(res.drivers || []);
                     setSettings(res.settings || null);
                 }
                 setIsLoading(false);
-            });
+            }, 15000);
         }
     }, [isAuthenticated]);
 
@@ -119,7 +119,7 @@ export default function AdminCalendarPage() {
             ? closedDays.filter((d: string) => d !== dateKey)
             : [...closedDays, dateKey];
         
-        socketService.emit('process_request', { 
+        socketService.emit('client_request', { 
             action: 'UPDATE_APP_SETTING', 
             payload: { key: 'closedDays', value: JSON.stringify(newClosedDays) } 
         }, (res: any) => {
@@ -133,7 +133,7 @@ export default function AdminCalendarPage() {
                 toast({ variant: "destructive", title: "Errore", description: "Impossibile aggiornare lo stato del giorno." });
             }
             setIsUpdatingStatus(false);
-        });
+        }, 15000);
     };
 
     const handleDateChange = (newDate: Date) => {

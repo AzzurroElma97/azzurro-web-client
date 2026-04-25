@@ -53,7 +53,7 @@ export default function CustomerDashboard() {
     setCustomerData(userData);
 
     // RECUPERO PRENOTAZIONI DAL MASTER SERVER
-    socketService.emit('process_request', {
+    socketService.emit('client_request', {
       action: 'GET_CUSTOMER_BOOKINGS',
       email: userData.email
     }, (res: any) => {
@@ -63,7 +63,7 @@ export default function CustomerDashboard() {
       } else {
         setError(res?.message || 'Errore nel recupero delle prenotazioni.');
       }
-    });
+    }, 15000);
 
     // Ascolta aggiornamenti in tempo reale (Tracker)
     socketService.on('sync_customer_bookings', (updatedBookings: Booking[]) => {

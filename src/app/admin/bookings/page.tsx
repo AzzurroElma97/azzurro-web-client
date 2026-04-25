@@ -86,15 +86,35 @@ export default function ManageBookingsPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      // Semplificato per usare il nuovo socketService Titanium
+      // Aggiunto il timeout di 20000ms per attivare master_direct_response
       socketService.emit('client_request', { action: 'GET_ALL_DATA_FOR_BOOKINGS' }, (res: any) => {
           if (res && res.success) {
-            setBookings(res.bookings || []);
+            // Mappatura dei dati in italiano dal DB SQLite al formato atteso dal Frontend
+            const mappedBookings = (res.bookings || []).map((b: any) => ({
+                ...b,
+                passengerName: b.cliente_nome || 'Sconosciuto',
+                passengerPhone: b.cliente_telefono || '',
+                date: b.data_partenza || b.date,
+                time: b.ora_partenza || b.time,
+                origin: b.partenza_indirizzo || b.origin,
+                destination: b.destinazione_indirizzo || b.destination,
+                price: b.preventivo_accettato || b.price,
+                serviceType: b.tipo_servizio || b.serviceType,
+                passengers: b.passeggeri || 1,
+                luggage: b.bagagli || 0,
+                status: b.stato_corsa || b.status || 'PENDING',
+                driverName: b.driver_nome || b.driverName || 'Nessuno',
+                driverVehicle: b.driver_auto || b.driverVehicle || ''
+            }));
+            
+            setBookings(mappedBookings);
             setDrivers(res.drivers || []);
             setSettings(res.settings);
+          } else {
+            console.error("Errore o Timeout ricezione dati Admin:", res);
           }
           setIsLoading(false);
-      });
+      }, 20000);
 
       const handleEliminazione = (data: any) => {
           if (data && data.rideId) {

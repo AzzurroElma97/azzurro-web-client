@@ -50,13 +50,23 @@ export default function RegisterPage() {
       setIsLoading(false);
       if (res && res.success) {
         setIsSuccess(true);
-        setTimeout(() => {
-          router.push('/login');
-        }, 3000);
+        
+        // Sia Customer che Driver (in attesa) entrano come Customer
+        localStorage.setItem('isCustomerAuthenticated', 'true');
+        localStorage.setItem('customerData', JSON.stringify({
+          nome: formData.nome,
+          email: formData.email,
+          telefono: formData.telefono,
+          actual_type: userType === 'driver' ? 'PENDING_DRIVER' : 'CUSTOMER'
+        }));
+        localStorage.setItem('userName', formData.nome);
+
+        setTimeout(() => router.push('/customer/dashboard'), 2000);
       } else {
-        setError(res?.message || 'Errore durante la registrazione. Riprova.');
+        const msg = res?.message || res?.error || 'Errore durante la registrazione. Riprova.';
+        setError(msg.includes('TIMEOUT') ? 'Il Blackview non risponde. Verifica che sia Online.' : msg);
       }
-    });
+    }, 20000); // timeout 20s per attivare il canale event-based
   };
 
   if (isSuccess) {

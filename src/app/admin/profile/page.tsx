@@ -61,7 +61,7 @@ export default function AdminProfilePage() {
     useEffect(() => {
         if (isAuthenticated) {
             setIsLoading(true);
-            socketService.emit('process_request', { action: 'GET_ALL_DATA_FOR_BOOKINGS' }, (res: any) => {
+            socketService.emit('client_request', { action: 'GET_ALL_DATA_FOR_BOOKINGS' }, (res: any) => {
                 if (res && res.success) {
                     setRides(res.bookings || []);
                     setDrivers(res.drivers || []);
@@ -69,7 +69,7 @@ export default function AdminProfilePage() {
                     setSupport([]);
                 }
                 setIsLoading(false);
-            });
+            }, 15000);
         }
     }, [isAuthenticated]);
 

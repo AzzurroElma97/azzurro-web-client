@@ -145,18 +145,11 @@ export default function HomePage() {
     setIsSearching(true);
     setLookupResult(null);
 
-    // Timeout di sicurezza: se il server non risponde entro 10s, mostriamo errore
-    const timeoutId = setTimeout(() => {
-      setIsSearching(false);
-      setLookupResult('NOT_FOUND');
-    }, 10000);
-
     socketService.emit(
       'client_request',
       { action: 'TRACK_RIDE', payload: { ticket_id: lookupCode.trim().toUpperCase() } },
       (res: any) => {
         console.log('📡 Risultato Ricerca:', res);
-        clearTimeout(timeoutId);
         setIsSearching(false);
         if (res && res.success && res.ride) {
           const r = res.ride;
@@ -175,10 +168,13 @@ export default function HomePage() {
             driverVehicle: r.driver_auto || 'Veicolo Azzurro',
             intermediateStops: r.tappe_intermedie ? (typeof r.tappe_intermedie === 'string' ? JSON.parse(r.tappe_intermedie) : r.tappe_intermedie) : [],
           });
+        } else if (res?.error?.includes('TIMEOUT') || res?.message?.includes('TIMEOUT')) {
+          setLookupResult('OFFLINE');
         } else {
           setLookupResult('NOT_FOUND');
         }
-      }
+      },
+      15000 // timeout 15s — attiva il canale master_direct_response
     );
   };
 

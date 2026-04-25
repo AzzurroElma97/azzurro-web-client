@@ -68,6 +68,18 @@ export default function BookingClient() {
     const leadTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
     form.setValue('rideDate', leadTime);
     form.setValue('rideTime', format(leadTime, 'HH:mm'));
+
+    // Auto-compilazione dei dati se loggato
+    const customerStr = localStorage.getItem('customerData') || localStorage.getItem('driverData');
+    if (customerStr) {
+        try {
+            const userData = JSON.parse(customerStr);
+            if (userData.nome) form.setValue('passengerName', userData.nome);
+            if (userData.telefono) form.setValue('passengerPhone', userData.telefono);
+        } catch (e) {
+            console.error("Errore lettura dati utente salvati", e);
+        }
+    }
   }, [form]);
 
   useEffect(() => {

@@ -17,16 +17,25 @@ export function RideSummaryCard({ ride, finalCode, adminWhatsapp }: { ride: any,
     const handleDownload = () => {
         if (!resultCardRef.current) return;
         setIsDownloading(true);
-        toPng(resultCardRef.current, { 
-            cacheBust: true, 
+
+        // Opzioni che prevengono SecurityError da CSS cross-origin (es. Google Fonts)
+        const options = {
+            cacheBust: true,
             backgroundColor: '#ffffff',
-            filter: (node) => {
+            skipFonts: true,          // Evita di leggere regole CSS cross-origin
+            skipAutoScale: false,
+            pixelRatio: 2,            // Alta qualità
+            filter: (node: HTMLElement) => {
+                // Esclude elementi che potrebbero causare errori di sicurezza
                 if (node.tagName === 'LINK') return false;
                 if (node.tagName === 'SCRIPT') return false;
+                if (node.tagName === 'STYLE') return false;
                 if ((node as HTMLElement).style?.display === 'none') return false;
                 return true;
             }
-        })
+        };
+
+        toPng(resultCardRef.current, options)
         .then((dataUrl) => {
             const link = document.createElement('a');
             link.download = `azzurro-prenotazione-${finalCode}.png`;
@@ -34,8 +43,26 @@ export function RideSummaryCard({ ride, finalCode, adminWhatsapp }: { ride: any,
             link.click();
             toast({ title: "📸 Foto salvata!", description: "Controlla la galleria del tuo dispositivo." });
         })
-        .catch(() => {
-            toast({ title: "Errore download", description: "Riprova tra un momento.", variant: 'destructive' });
+        .catch((err) => {
+            // Se è un SecurityError CSS, riprova senza leggere gli stili esterni
+            if (err?.name === 'SecurityError' || err?.message?.includes('cssRules')) {
+                toPng(resultCardRef.current!, { 
+                    cacheBust: true, 
+                    backgroundColor: '#ffffff', 
+                    skipFonts: true,
+                    filter: () => true 
+                })
+                .then((dataUrl) => {
+                    const link = document.createElement('a');
+                    link.download = `azzurro-prenotazione-${finalCode}.png`;
+                    link.href = dataUrl;
+                    link.click();
+                    toast({ title: "📸 Foto salvata!", description: "Immagine salvata con successo." });
+                })
+                .catch(() => toast({ title: "Errore", description: "Non è stato possibile salvare l'immagine.", variant: 'destructive' }));
+            } else {
+                toast({ title: "Errore download", description: "Riprova tra un momento.", variant: 'destructive' });
+            }
         })
         .finally(() => setIsDownloading(false));
     };
