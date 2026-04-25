@@ -33,6 +33,37 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { socketService } from '@/services/socket-service';
 
+const ManagementMenuItem = ({
+  icon,
+  title,
+  description,
+  href,
+  color,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  href: string;
+  color: string;
+}) => (
+  <Link href={href} className="block group">
+    <Card className="h-full hover:shadow-md transition-all rounded-2xl border-none shadow-sm overflow-hidden">
+      <CardContent className="flex flex-col p-8 h-full">
+        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-6", color)}>
+            {icon}
+        </div>
+        <div className="space-y-2 flex-1">
+            <p className="font-bold text-slate-900 text-xl">{title}</p>
+            <p className="text-sm text-slate-500 font-medium leading-relaxed">{description}</p>
+        </div>
+        <div className="mt-8 flex items-center text-xs font-bold text-blue-600 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
+            Gestisci <ChevronRight className="ml-1 h-3 w-3" />
+        </div>
+      </CardContent>
+    </Card>
+  </Link>
+);
+
 export default function AdminPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -72,34 +103,53 @@ export default function AdminPage() {
   };
 
   const handleAutoLogin = () => {
+    console.log("🚀 [TITANIUM] Avvio sequenza Accesso Automatico...");
     setIsAutoWaiting(true);
     setError('');
 
-    const attemptLogin = () => {
+    const attempt = () => {
+      const senderId = socketService.getSocketId();
+      console.log(`📡 [TITANIUM] Invio richiesta con ID Mittente: ${senderId}`);
+
+      // Prepariamo l'ascolto del segnale di sblocco diretto (più robusto della callback)
+      const handleDirectResponse = (res: any) => {
+         if (res.action === 'AUTO_LOGIN_GRANTED') {
+            console.log("⚡ [TITANIUM] Ricevuto SBLOCCO DIRETTO dal Master!");
+            socketService.off('master_direct_response');
+            setIsAuthenticated(true);
+            setIsAutoWaiting(false);
+            localStorage.setItem('isAdminAuthenticated', 'true');
+            localStorage.setItem('adminEmail', 'AUTO_LOGIN');
+         }
+      };
+      
+      socketService.on('master_direct_response', handleDirectResponse);
+
       socketService.emit('client_request', {
         action: 'REQUEST_AUTO_LOGIN',
+        senderId: senderId, 
         device: typeof window !== 'undefined' ? navigator.userAgent : 'Web Client Titanium'
       }, (res: any) => {
+        console.log("📩 [TITANIUM] Conferma ricezione dal Broker:", res);
+        
         if (res && res.success) {
-          setIsAuthenticated(true);
-          setIsAutoWaiting(false);
-          localStorage.setItem('isAdminAuthenticated', 'true');
-          localStorage.setItem('adminEmail', 'AUTO_LOGIN');
+           console.log("⏳ [TITANIUM] In attesa di sblocco manuale sul Blackview...");
         } else {
-          // Se c'è un timeout o il master è offline, non ci arrendiamo subito.
-          // Aspettiamo 7 secondi come richiesto e riproviamo, a meno che non sia un rifiuto esplicito.
-          if (res?.message === 'TIMEOUT_EXCEEDED' || res?.error === 'OFFLINE' || res?.message?.includes('non ha risposto')) {
-            console.log("📡 Segnale interrotto o timeout. Riproviamo tra 7 secondi...");
-            setTimeout(attemptLogin, 7000);
-          } else {
-            setIsAutoWaiting(false);
-            setError(res?.message || 'Accesso automatico rifiutato dal Master.');
-          }
+           const isExplicitDeny = res && res.success === false && res.message?.toLowerCase().includes('rifiutato');
+           if (!isExplicitDeny) {
+              socketService.off('master_direct_response');
+              console.log("📡 [TITANIUM] Master non pronto. Riprovo...");
+              setTimeout(attempt, 7000);
+           } else {
+              socketService.off('master_direct_response');
+              setIsAutoWaiting(false);
+              setError(res?.message || 'Accesso negato.');
+           }
         }
-      }, 15000); // Timeout del socket a 15s per dare spazio alla risposta
+      }, 60000);
     };
 
-    attemptLogin();
+    attempt();
   };
 
   const handleLogout = () => {
@@ -212,20 +262,6 @@ export default function AdminPage() {
             </div>
           </Card>
         )}
-      </div>
-    );
-  }
-
-            <Link href="/" className="block w-full text-center text-slate-600 hover:text-slate-400 transition-colors text-[9px] font-black uppercase tracking-[0.3em] pt-4">
-              <ArrowLeft className="inline w-3 h-3 mr-2" />
-              Torna alla Home
-            </Link>
-          </div>
-          
-          <div className="text-center">
-            <p className="text-[8px] font-black text-slate-700 uppercase tracking-widest">Azzurro Security Enforcement</p>
-          </div>
-        </Card>
       </div>
     );
   }
@@ -345,34 +381,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-const ManagementMenuItem = ({
-  icon,
-  title,
-  description,
-  href,
-  color,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  href: string;
-  color: string;
-}) => (
-  <Link href={href} className="block group">
-    <Card className="h-full hover:shadow-md transition-all rounded-2xl border-none shadow-sm overflow-hidden">
-      <CardContent className="flex flex-col p-8 h-full">
-        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-6", color)}>
-            {icon}
-        </div>
-        <div className="space-y-2 flex-1">
-            <p className="font-bold text-slate-900 text-xl">{title}</p>
-            <p className="text-sm text-slate-500 font-medium leading-relaxed">{description}</p>
-        </div>
-        <div className="mt-8 flex items-center text-xs font-bold text-blue-600 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
-            Gestisci <ChevronRight className="ml-1 h-3 w-3" />
-        </div>
-      </CardContent>
-    </Card>
-  </Link>
-);

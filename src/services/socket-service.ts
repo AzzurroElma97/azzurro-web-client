@@ -2,7 +2,7 @@ import { io, Socket } from 'socket.io-client';
 
 class SocketService {
   private socket: Socket | null = null;
-  private readonly RELAY_URL = 'https://azzurro-relay-broker.onrender.com'; // Live Ponte v2.0
+  private readonly RELAY_URL = 'http://localhost:3000'; // Test Locale Titanium v3.0
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -82,7 +82,14 @@ class SocketService {
   }
 
   public login(data: any, callback: (res: any) => void) {
-    this.emit('client_request', { action: 'LOGIN_USER', ...data }, callback, 20000);
+    console.log("🔑 Inviando richiesta login al Master:", data.type, data.email || data.telefono);
+    this.emit('client_request', { 
+      action: 'LOGIN_USER', 
+      ...data 
+    }, (res) => {
+      console.log("📩 Risposta Login dal Master:", res);
+      callback(res);
+    }, 30000); // Aumentato a 30s
   }
 
   private async checkMasterPresence() {

@@ -64,7 +64,9 @@ export default function LoginPage() {
           router.push('/driver');
         }
       } else {
-        setError(res?.message || 'Credenziali errate. Riprova.');
+        const errorMsg = res?.message || res?.error || 'Errore imprevisto durante il login.';
+        console.error("❌ Errore Login ricevuto:", res);
+        setError(errorMsg === 'TIMEOUT_EXCEEDED' ? 'Il Master Server è lento a rispondere. Riprova.' : errorMsg);
       }
     });
   };
