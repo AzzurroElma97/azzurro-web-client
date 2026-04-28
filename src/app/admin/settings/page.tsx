@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { 
-  Banknote, Landmark, Power, Save, ArrowLeft, MessageSquareText, Loader2, Car, Percent, Plane, Users, Briefcase, Palette, Upload, X, Globe
+  Banknote, Landmark, Power, Save, ArrowLeft, MessageSquareText, Loader2, Car, Percent, Plane, Users, Briefcase, Palette, Upload, X, Globe, ShieldAlert, KeyRound
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -122,6 +122,7 @@ export default function AdminSettingsPage() {
               <TabsTrigger value="branding" className="rounded-lg px-4 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Immagini</TabsTrigger>
               <TabsTrigger value="servizi" className="rounded-lg px-4 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Stato Servizi</TabsTrigger>
               <TabsTrigger value="info" className="rounded-lg px-4 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Contatti</TabsTrigger>
+              <TabsTrigger value="sicurezza" className="rounded-lg px-4 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Sicurezza</TabsTrigger>
           </TabsList>
 
           <TabsContent value="tariffe" className="space-y-6">
@@ -249,6 +250,32 @@ export default function AdminSettingsPage() {
                             <div className="relative">
                                 <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                 <Input value={localSettings.public_site_url || 'https://azzurro-community.vercel.app'} onChange={e => setLocalSettings({...localSettings, public_site_url: e.target.value})} className="rounded-xl h-12 font-bold pl-10" placeholder="https://..." />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+              </div>
+          </TabsContent>
+
+          <TabsContent value="sicurezza" className="space-y-6">
+              <div className="max-w-2xl mx-auto space-y-6">
+                <Card className="rounded-2xl border-none shadow-sm border-amber-100 bg-amber-50/20">
+                    <CardHeader className="bg-amber-50/50 border-b">
+                        <CardTitle className="text-lg font-black uppercase tracking-widest text-amber-700 flex items-center gap-2">
+                            <ShieldAlert className="w-5 h-5" /> Sicurezza Account Admin
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-8 space-y-6 text-left">
+                        <div className="space-y-1">
+                            <Label className="text-[10px] font-black uppercase text-slate-400">Email Amministratore</Label>
+                            <Input value={localSettings.admin_email_chiaro || 'creator.azzurro@gmail.com'} disabled className="rounded-xl h-12 font-bold bg-slate-100" />
+                        </div>
+                        <Separator />
+                        <div className="space-y-4">
+                            <div className="space-y-1">
+                                <Label className="text-[10px] font-black uppercase text-slate-400">Nuova Password Master (Titanium)</Label>
+                                <Input type="password" placeholder="Lascia vuoto per non cambiare..." onChange={e => setLocalSettings({...localSettings, new_admin_password: e.target.value})} className="rounded-xl h-12 font-bold" />
+                                <p className="text-[9px] text-slate-400 font-medium">Questa password verrà aggiornata sul Blackview al salvataggio.</p>
                             </div>
                         </div>
                     </CardContent>

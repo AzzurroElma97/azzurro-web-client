@@ -18,15 +18,24 @@ import { useRouter } from 'next/navigation';
 import { socketService } from '@/services/socket-service';
 import { cn } from '@/lib/utils';
 
+import { useMasterStatus } from '@/components/MasterStatusProvider';
+
 export default function Header() {
   const router = useRouter();
+  const { isOnline: isMasterOnline, battery: masterBattery } = useMasterStatus();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isDriver, setIsDriver] = useState(false);
   const [isCustomer, setIsCustomer] = useState(false);
   const [userName, setUserName] = useState('');
-  const [isMasterOnline, setIsMasterOnline] = useState(false);
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<any>(null);
+
+  useEffect(() => {
+    socketService.on('master_response', (res: any) => {
+      if (res.action === 'GET_SETTINGS') setSettings(res.payload);
+    });
+    return () => socketService.off('master_response');
+  }, []);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -37,17 +46,10 @@ export default function Header() {
     };
 
     checkAuth();
-    const interval = setInterval(checkAuth, 1000); // Controllo rapido per aggiornare UI post-login
+    const interval = setInterval(checkAuth, 1000); 
     
-    const unsubscribe = socketService.subscribeStatus((status) => {
-      setIsMasterOnline(status);
-    });
-
     setLoading(false);
-    return () => {
-      clearInterval(interval);
-      unsubscribe();
-    };
+    return () => clearInterval(interval);
   }, []);
 
   const handleLogout = () => {
@@ -72,39 +74,37 @@ export default function Header() {
   return (
     <header className="w-full bg-white border-b border-slate-100">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 group">
-          {settings?.logoUrl ? (
-            <div className="relative h-10 w-32">
-              <Image 
-                src={settings.logoUrl} 
-                alt="Azzurro Community Logo" 
-                fill 
-                className="object-contain"
-              />
-            </div>
-          ) : (
-            <>
+        <Link href="/" className="flex items-center gap-3 group">
+            {settings?.logo_url ? (
+              <div className="relative h-10 w-10">
+                <Image 
+                  src={settings.logo_url} 
+                  alt="Logo" 
+                  fill 
+                  className="object-contain rounded-lg"
+                />
+              </div>
+            ) : (
               <div className="p-1.5 rounded-lg bg-blue-600 text-white">
                 <Zap className="h-5 w-5" />
               </div>
-              <span className="font-black text-xl text-slate-900 tracking-tight">Azzurro<span className="text-blue-600">Ride</span></span>
-            </>
-          )}
+            )}
+            <span className="font-black text-xl text-slate-900 tracking-tight">Azzurro<span className="text-blue-600">Ride</span></span>
         </Link>
         
         <div className="flex items-center gap-4">
-          {/* Indicatore Stato Master */}
+          {/* Indicatore Stato Master + Batteria */}
           <div className={cn(
-            "hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all",
+            "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border text-[9px] font-black uppercase tracking-widest transition-all",
             isMasterOnline 
-              ? "bg-emerald-50 border-emerald-100 text-emerald-600 shadow-sm shadow-emerald-500/10" 
+              ? "bg-emerald-50 border-emerald-100 text-emerald-600 shadow-sm" 
               : "bg-slate-50 border-slate-200 text-slate-400"
           )}>
             <div className={cn(
               "w-2 h-2 rounded-full",
               isMasterOnline ? "bg-emerald-500 animate-pulse" : "bg-slate-300"
             )} />
-            {isMasterOnline ? "Titanium Link Active" : "Master Offline"}
+            {isMasterOnline ? `Master Active (${masterBattery}%)` : "Master Offline"}
           </div>
 
           {!loading && isLoggedIn ? (

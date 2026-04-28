@@ -88,6 +88,19 @@ export default function HomePage() {
   const [appSettings, setAppSettings] = useState<any>({});
   
   useEffect(() => {
+    // Recupera dati utente loggato per auto-compilazione
+    const savedCustomer = localStorage.getItem('customerData');
+    const savedDriver = localStorage.getItem('isDriverAuthenticated') === 'true' ? localStorage.getItem('driverData') : null;
+    const userData = savedDriver ? JSON.parse(savedDriver) : (savedCustomer ? JSON.parse(savedCustomer) : null);
+
+    if (userData) {
+      setFormData(prev => ({
+        ...prev,
+        name: userData.nome || prev.name,
+        phone: userData.telefono || prev.phone
+      }));
+    }
+
     socketService.on('master_response', (res: any) => {
        if (res.action === 'GET_SETTINGS') setAppSettings(res.payload);
     });

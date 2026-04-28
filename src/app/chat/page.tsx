@@ -44,12 +44,23 @@ export default function ChatPage() {
     const authStatus = localStorage.getItem('isAdminAuthenticated');
     setIsAdmin(authStatus === 'true');
 
-    // Recupera Nickname salvato
+    // Recupera Nickname salvato o nome utente loggato
     const savedNick = localStorage.getItem('chatNickname');
-    if (savedNick) setNickname(savedNick);
+    const loggedName = localStorage.getItem('userName');
+    const isLogged = localStorage.getItem('isCustomerAuthenticated') === 'true' || localStorage.getItem('isDriverAuthenticated') === 'true';
 
-    // Carica Storico
-    socketService.emit('client_request', { action: 'GET_CHAT_HISTORY' }, (res: any) => {
+    if (loggedName && isLogged) {
+      setNickname(loggedName);
+      setIsJoined(true);
+    } else if (savedNick) {
+      setNickname(savedNick);
+    }
+
+    // Carica Storico e segnala ingresso
+    socketService.emit('client_request', { 
+      action: 'GET_CHAT_HISTORY', 
+      utente: loggedName && isLogged ? loggedName : (savedNick || 'Ospite') 
+    }, (res: any) => {
       setIsLoading(false);
       if (res && res.success) {
         setMessages(res.history);
@@ -61,10 +72,24 @@ export default function ChatPage() {
       setMessages(prev => [...prev, payload]);
     });
 
+    // Ascolta aggiornamenti (es. eliminazioni)
+    socketService.on('chat_history_updated', (payload: any) => {
+       setMessages(payload);
+    });
+
     return () => {
       socketService.off('chat_message');
+      socketService.off('chat_history_updated');
     };
   }, []);
+
+  const deleteMessage = (id: number) => {
+    if (!isAdmin) return;
+    socketService.emit('client_request', { 
+      action: 'DELETE_CHAT_MESSAGE', 
+      payload: { messageId: id } 
+    });
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -205,7 +230,7 @@ export default function ChatPage() {
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               className={cn(
-                "flex flex-col max-w-[80%]",
+                "flex flex-col max-w-[80%] group",
                 msg.utente === nickname ? "ml-auto items-end" : "mr-auto items-start"
               )}
             >
@@ -213,21 +238,33 @@ export default function ChatPage() {
                 <div className={cn("w-5 h-5 rounded-md flex items-center justify-center", getDiversifier(msg.utente))}>
                   <User className="w-3 h-3 text-white" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  {obfuscateName(msg.utente, msg.full_info)}
-                </span>
-                {isAdmin && msg.full_info && (
-                   <span className="text-[8px] font-mono text-slate-600 bg-white/5 px-1.5 py-0.5 rounded">
-                      {msg.full_info}
-                   </span>
-                )}
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className={cn("text-[10px] font-black uppercase tracking-widest", msg.full_info?.includes('ADMIN_') ? "text-blue-400" : "text-slate-400")}>
+                      {obfuscateName(msg.utente, msg.full_info)}
+                    </span>
+                    {msg.full_info?.includes('ADMIN_') && (
+                      <span className="bg-blue-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter shadow-lg shadow-blue-500/20">MASTER ADMIN</span>
+                    )}
+                    {isAdmin && (
+                      <button onClick={() => deleteMessage(msg.id)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-rose-500 hover:bg-rose-500/10 rounded">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  {isAdmin && msg.full_info && (
+                    <span className="text-[7px] font-mono text-slate-500 italic">
+                       {msg.full_info.includes('CLIENT_') ? `IP: ${msg.full_info.split('CLIENT_')[1]}` : 'Admin Connection'}
+                    </span>
+                  )}
+                </div>
               </div>
               
               <div className={cn(
                 "p-4 rounded-3xl text-sm font-medium shadow-sm leading-relaxed",
                 msg.utente === nickname 
                   ? "bg-blue-600 text-white rounded-tr-none" 
-                  : "bg-slate-900 border border-white/5 text-slate-100 rounded-tl-none"
+                  : (msg.full_info?.includes('ADMIN_') ? "bg-slate-800 border-2 border-blue-500/30 text-white rounded-tl-none" : "bg-slate-900 border border-white/5 text-slate-100 rounded-tl-none")
               )}>
                 {msg.messaggio}
               </div>

@@ -301,6 +301,18 @@ export default function ManageDriversPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
+                         {person.password_provvisoria ? (
+                           <div className="flex flex-col items-center p-2 rounded-xl bg-amber-50 border border-amber-100">
+                             <span className="text-[8px] font-black text-amber-600 uppercase tracking-widest mb-1 flex items-center gap-1"><KeyRound className="w-2.5 h-2.5" /> Pass Provvisoria</span>
+                             <span className="text-xs font-black text-slate-900 font-mono tracking-tighter bg-white px-2 py-0.5 rounded-lg shadow-sm">{person.password_provvisoria}</span>
+                           </div>
+                         ) : (
+                           <div className="flex flex-col items-center opacity-20">
+                             <span className="text-[8px] font-bold text-slate-400 uppercase">Standard</span>
+                           </div>
+                         )}
+                      </TableCell>
+                      <TableCell className="text-center">
                          <div className="flex flex-col items-center">
                             <span className="text-lg font-black text-slate-900 leading-none">{person.totalActivity}</span>
                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{person.isDriver ? 'Corse' : 'Prenotazioni'}</span>

@@ -126,6 +126,10 @@ class SocketService {
     return this.masterOnline;
   }
 
+  public getSocketId() {
+    return this.socket?.id || 'NO_ID';
+  }
+
   public on(event: string, callback: (data: any) => void) {
     this.socket?.on(event, callback);
   }
@@ -134,8 +138,12 @@ class SocketService {
     this.socket?.once(event, callback);
   }
 
-  public off(event: string) {
-    this.socket?.off(event);
+  public off(event: string, callback?: (data: any) => void) {
+    if (callback) {
+      this.socket?.off(event, callback);
+    } else {
+      this.socket?.off(event);
+    }
   }
 
   public emit(event: string, data: any, callback?: (res: any) => void, timeoutMs: number = 0) {

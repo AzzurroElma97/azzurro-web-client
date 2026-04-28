@@ -83,12 +83,12 @@ export default function AdminPage() {
         if (res && res.success) setAppSettings(res.payload);
       });
       
-      const unsubs = socketService.onStatusChange((status) => {
+      const unsubs = socketService.subscribeStatus((status) => {
         setIsServerOnline(status);
       });
       setIsServerOnline(socketService.isMasterOnline());
       
-      return () => unsubs();
+      return () => unsubs && unsubs();
     }
   }, []);
 
@@ -125,7 +125,7 @@ export default function AdminPage() {
 
       // Prepariamo l'ascolto del segnale di sblocco diretto (più robusto della callback)
       const handleDirectResponse = (res: any) => {
-         if (res.action === 'AUTO_LOGIN_GRANTED') {
+         if (res.action === 'REQUEST_AUTO_LOGIN_RESPONSE' && res.payload?.success) {
             console.log("⚡ [TITANIUM] Ricevuto SBLOCCO DIRETTO dal Master!");
             socketService.off('master_direct_response');
             setIsAuthenticated(true);

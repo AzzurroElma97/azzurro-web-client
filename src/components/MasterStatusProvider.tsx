@@ -4,12 +4,14 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { socketService } from '@/services/socket-service';
 import { AlertTriangle, Bell, X } from 'lucide-react';
 
-const MasterStatusContext = createContext<{ isOnline: boolean }>({ isOnline: true });
+const MasterStatusContext = createContext<{ isOnline: boolean, battery: string, isMaintenance: boolean }>({ isOnline: true, battery: '100', isMaintenance: false });
 
 export const useMasterStatus = () => useContext(MasterStatusContext);
 
 export function MasterStatusProvider({ children }: { children: React.ReactNode }) {
-  const [isOnline, setIsOnline] = useState(true); // Default true per evitare flash iniziali
+  const [isOnline, setIsOnline] = useState(true);
+  const [battery, setBattery] = useState('100');
+  const [isMaintenance, setIsMaintenance] = useState(false);
   const [hasCheckedOnce, setHasCheckedOnce] = useState(false);
 
   const [avviso, setAvviso] = useState<string | null>(null);
@@ -21,11 +23,19 @@ export function MasterStatusProvider({ children }: { children: React.ReactNode }
       setHasCheckedOnce(true);
     });
 
+    // Health Check dal Master
+    const handleHealth = (res: any) => {
+      if (res.action === 'HEALTH_CHECK') {
+        setBattery(res.payload.battery);
+        setIsMaintenance(res.payload.maintenance);
+      }
+    };
+    socketService.on('master_response', handleHealth);
+
     // Listener per gli avvisi globali (Push Notifications) dal Master
     const handleAvviso = (data: any) => {
        if (data && data.message) {
           setAvviso(data.message);
-          // Auto-nascondi dopo 15 secondi
           setTimeout(() => setAvviso(null), 15000);
        }
     };
@@ -33,30 +43,31 @@ export function MasterStatusProvider({ children }: { children: React.ReactNode }
 
     return () => {
       unsubscribe();
+      socketService.off('master_response', handleHealth);
       socketService.off('avviso_globale');
     };
   }, []);
 
-  // Mostra l'interfaccia in bianco e nero (grayscale) e con un banner rosso se il Master è offline.
   return (
-    <MasterStatusContext.Provider value={{ isOnline }}>
+    <MasterStatusContext.Provider value={{ isOnline, battery, isMaintenance }}>
       <div className={(!isOnline && hasCheckedOnce) ? "offline-mode" : "online-mode"}>
         {children}
       </div>
       
-      {(!isOnline && hasCheckedOnce) && (
+      {(isMaintenance || (!isOnline && hasCheckedOnce)) && (
         <>
           <div className="fixed top-0 left-0 w-full z-50 bg-red-600 text-white p-2 text-center text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg animate-in slide-in-from-top-4">
              <AlertTriangle className="w-4 h-4" /> 
-             SISTEMA OFFLINE - IL MASTER BLACKVIEW NON È CONNESSO - I DATI NON SONO SINCRONIZZATI
+             {isMaintenance ? "MODALITÀ MANUTENZIONE ATTIVA - IL SERVIZIO È TEMPORANEAMENTE SOSPESO DALLA CENTRALE" : "SISTEMA OFFLINE - IL MASTER BLACKVIEW NON È CONNESSO"}
           </div>
           
-          <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-auto bg-black/60">
-            <div className="bg-slate-900/90 text-white px-12 py-8 rounded-[3rem] border border-white/5 shadow-2xl backdrop-blur-md transform -rotate-2 animate-in zoom-in-95 duration-700 pointer-events-auto">
+          <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-auto bg-black/60 backdrop-blur-sm">
+            <div className="bg-slate-900/90 text-white px-12 py-8 rounded-[3rem] border border-white/5 shadow-2xl backdrop-blur-md transform -rotate-2 animate-in zoom-in-95 duration-700 pointer-events-auto text-center space-y-4">
               <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-slate-300 to-slate-500 drop-shadow-2xl flex items-center gap-4">
-                <AlertTriangle className="w-16 h-16 md:w-24 md:h-24 text-slate-400" />
-                MANUTENZIONE
+                <AlertTriangle className="w-16 h-16 md:w-24 md:h-24 text-amber-500" />
+                {isMaintenance ? "STANDBY" : "OFFLINE"}
               </h1>
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Il Master Server Blackview ha sospeso le operazioni.</p>
             </div>
           </div>
         </>
