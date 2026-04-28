@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { 
-  Banknote, Landmark, Power, Save, ArrowLeft, MessageSquareText, Loader2, Car, Percent, Plane, Users, Briefcase, Palette, Upload, X
+  Banknote, Landmark, Power, Save, ArrowLeft, MessageSquareText, Loader2, Car, Percent, Plane, Users, Briefcase, Palette, Upload, X, Globe
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -63,9 +63,13 @@ export default function AdminSettingsPage() {
     socketService.emit('client_request', { 
         action: 'UPDATE_SETTINGS', 
         payload: localSettings 
+    }, (res: any) => {
+        if (res && res.success) {
+            toast({ title: "Database Sincronizzato!", description: "Le tariffe sono state salvate permanentemente sul Blackview." });
+        } else {
+            toast({ title: "Errore Salvataggio", description: "Il Master non ha confermato la scrittura.", variant: "destructive" });
+        }
     });
-
-    toast({ title: "Impostazioni inviate!", description: "Le tariffe sono state aggiornate sul Blackview." });
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'logoUrl' | 'heroImageUrl') => {
@@ -125,28 +129,28 @@ export default function AdminSettingsPage() {
                   <Card className="rounded-2xl border-none shadow-sm">
                       <CardHeader className="border-b bg-slate-50/50"><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><Banknote className="w-4 h-4 text-emerald-600" /> Basi & Minimi</CardTitle></CardHeader>
                       <CardContent className="p-6 space-y-4">
-                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Quota Fissa Tariffa Base (€)</Label><Input type="number" step="0.5" value={localSettings.basePrice} onChange={e => setLocalSettings({...localSettings, basePrice: parseFloat(e.target.value)})} className="rounded-xl font-bold" /></div>
-                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Protezione Minima Corsa (€)</Label><Input type="number" step="0.5" value={localSettings.minFare} onChange={e => setLocalSettings({...localSettings, minFare: parseFloat(e.target.value)})} className="rounded-xl font-bold" /></div>
-                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Corsa Minima Accettazione (€)</Label><Input type="number" step="0.5" value={localSettings.minAcceptableFare} onChange={e => setLocalSettings({...localSettings, minAcceptableFare: parseFloat(e.target.value)})} className="rounded-xl font-bold" /></div>
+                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Quota Fissa Base (€)</Label><Input type="number" step="0.5" value={localSettings.tariffa_base_fissa} onChange={e => setLocalSettings({...localSettings, tariffa_base_fissa: e.target.value})} className="rounded-xl font-bold" /></div>
+                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Minimo Aeroporto (€)</Label><div className="relative"><Plane className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" /><Input type="number" step="1" value={localSettings.tariffa_minima_aeroporto} onChange={e => setLocalSettings({...localSettings, tariffa_minima_aeroporto: e.target.value})} className="rounded-xl font-bold pl-10" /></div></div>
+                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Supplemento Urgenza (€)</Label><Input type="number" step="1" value={localSettings.supplemento_urgenza} onChange={e => setLocalSettings({...localSettings, supplemento_urgenza: e.target.value})} className="rounded-xl font-bold" /></div>
                       </CardContent>
                   </Card>
                   <Card className="rounded-2xl border-none shadow-sm">
                       <CardHeader className="border-b bg-slate-50/50"><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><Car className="w-4 h-4 text-blue-600" /> Costi Chilometrici</CardTitle></CardHeader>
                       <CardContent className="p-6 space-y-4">
-                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">€ / KM Diurno</Label><Input type="number" step="0.01" value={localSettings.kmPrice} onChange={e => setLocalSettings({...localSettings, kmPrice: parseFloat(e.target.value)})} className="rounded-xl font-bold" /></div>
-                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">€ / KM Notturno</Label><Input type="number" step="0.01" value={localSettings.nightKmPrice} onChange={e => setLocalSettings({...localSettings, nightKmPrice: parseFloat(e.target.value)})} className="rounded-xl font-bold" /></div>
+                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">€ / KM Diurno</Label><Input type="number" step="0.01" value={localSettings.tariffa_km_diurna} onChange={e => setLocalSettings({...localSettings, tariffa_km_diurna: e.target.value})} className="rounded-xl font-bold" /></div>
+                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">€ / KM Notturno</Label><Input type="number" step="0.01" value={localSettings.tariffa_km_notturna} onChange={e => setLocalSettings({...localSettings, tariffa_km_notturna: e.target.value})} className="rounded-xl font-bold" /></div>
                           <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Inizio Notte</Label><Input type="time" value={localSettings.nightStart} onChange={e => setLocalSettings({...localSettings, nightStart: e.target.value})} className="rounded-xl font-bold" /></div>
-                            <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Fine Notte</Label><Input type="time" value={localSettings.nightEnd} onChange={e => setLocalSettings({...localSettings, nightEnd: e.target.value})} className="rounded-xl font-bold" /></div>
+                            <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Inizio Notte</Label><Input type="time" value={localSettings.nightStart || '22:00'} onChange={e => setLocalSettings({...localSettings, nightStart: e.target.value})} className="rounded-xl font-bold" /></div>
+                            <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Fine Notte</Label><Input type="time" value={localSettings.nightEnd || '06:00'} onChange={e => setLocalSettings({...localSettings, nightEnd: e.target.value})} className="rounded-xl font-bold" /></div>
                           </div>
                       </CardContent>
                   </Card>
                   <Card className="rounded-2xl border-none shadow-sm">
-                      <CardHeader className="border-b bg-slate-50/50"><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><Landmark className="w-4 h-4 text-amber-600" /> Supplementi</CardTitle></CardHeader>
+                      <CardHeader className="border-b bg-slate-50/50"><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><Percent className="w-4 h-4 text-amber-600" /> Ricarichi (%)</CardTitle></CardHeader>
                       <CardContent className="p-6 space-y-4">
-                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Minimo Aeroportuale (€)</Label><div className="relative"><Plane className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" /><Input type="number" step="1" value={localSettings.airportMinFare} onChange={e => setLocalSettings({...localSettings, airportMinFare: parseFloat(e.target.value)})} className="rounded-xl font-bold pl-10" /></div></div>
-                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Quota Fissa Urgenza (€)</Label><Input type="number" step="1" value={localSettings.urgentFee} onChange={e => setLocalSettings({...localSettings, urgentFee: parseFloat(e.target.value)})} className="rounded-xl font-bold" /></div>
-                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Ricarico Serata (%)</Label><div className="relative"><Percent className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" /><Input type="number" step="1" value={localSettings.eventSurchargePercent} onChange={e => setLocalSettings({...localSettings, eventSurchargePercent: parseFloat(e.target.value)})} className="rounded-xl font-bold" /></div></div>
+                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Ricarico Eventi (%)</Label><div className="relative"><Percent className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" /><Input type="number" step="1" value={localSettings.supplemento_eventi_perc} onChange={e => setLocalSettings({...localSettings, supplemento_eventi_perc: e.target.value})} className="rounded-xl font-bold" /></div></div>
+                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Persona Extra Std (%)</Label><div className="relative"><Percent className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" /><Input type="number" step="1" value={localSettings.extra_pax_std_perc} onChange={e => setLocalSettings({...localSettings, extra_pax_std_perc: e.target.value})} className="rounded-xl font-bold" /></div></div>
+                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Supplemento Weekend (€)</Label><Input type="number" step="1" value={localSettings.supplemento_weekend} onChange={e => setLocalSettings({...localSettings, supplemento_weekend: e.target.value})} className="rounded-xl font-bold" /></div>
                       </CardContent>
                   </Card>
               </div>
@@ -155,16 +159,19 @@ export default function AdminSettingsPage() {
           <TabsContent value="extra" className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Card className="rounded-2xl border-none shadow-sm">
-                      <CardHeader className="border-b bg-slate-50/50"><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><Users className="w-4 h-4 text-indigo-600" /> Sovrapprezzo Passeggeri Extra</CardTitle></CardHeader>
-                      <CardContent className="p-6 space-y-6">
-                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Extra Pax Aeroporto (Fisso €)</Label><Input type="number" step="1" value={localSettings.extraPassengerFixed} onChange={e => setLocalSettings({...localSettings, extraPassengerFixed: parseFloat(e.target.value)})} className="rounded-xl font-bold" /><p className="text-[9px] text-slate-400 italic">Sommato per ogni passeggero oltre il primo.</p></div>
-                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Extra Pax Altri Servizi (%)</Label><div className="relative"><Percent className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" /><Input type="number" step="1" value={localSettings.extraPassengerPercent} onChange={e => setLocalSettings({...localSettings, extraPassengerPercent: parseFloat(e.target.value)})} className="rounded-xl font-bold" /></div><p className="text-[9px] text-slate-400 italic">Percentuale aggiunta sul totale per ogni passeggero extra.</p></div>
+                      <CardHeader className="border-b bg-slate-50/50"><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><Users className="w-4 h-4 text-indigo-600" /> Passeggeri & Bagagli</CardTitle></CardHeader>
+                      <CardContent className="p-6 space-y-4">
+                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Extra Pax Aeroporto (€)</Label><Input type="number" step="1" value={localSettings.extra_pax_aero} onChange={e => setLocalSettings({...localSettings, extra_pax_aero: e.target.value})} className="rounded-xl font-bold" /></div>
+                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Supplemento Bagaglio (€)</Label><Input type="number" step="0.5" value={localSettings.supplemento_bagaglio} onChange={e => setLocalSettings({...localSettings, supplemento_bagaglio: e.target.value})} className="rounded-xl font-bold" /></div>
+                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Supplemento Tappa (€)</Label><Input type="number" step="0.5" value={localSettings.supplemento_tappa} onChange={e => setLocalSettings({...localSettings, supplemento_tappa: e.target.value})} className="rounded-xl font-bold" /></div>
                       </CardContent>
                   </Card>
                   <Card className="rounded-2xl border-none shadow-sm">
-                      <CardHeader className="border-b bg-slate-50/50"><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><Briefcase className="w-4 h-4 text-blue-600" /> Sovrapprezzo Bagagli</CardTitle></CardHeader>
+                      <CardHeader className="border-b bg-slate-50/50"><CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><Zap className="w-4 h-4 text-blue-600" /> Lead Time (Preavviso)</CardTitle></CardHeader>
                       <CardContent className="p-6 space-y-4">
-                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Costo per Singolo Bagaglio (€)</Label><Input type="number" step="0.5" value={localSettings.luggagePrice} onChange={e => setLocalSettings({...localSettings, luggagePrice: parseFloat(e.target.value)})} className="rounded-xl font-bold" /><p className="text-[9px] text-slate-400 italic">Sommato al totale per ogni bagaglio registrato.</p></div>
+                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Aeroporti (Ore)</Label><Input type="number" value={localSettings.lead_time_aero_ore} onChange={e => setLocalSettings({...localSettings, lead_time_aero_ore: e.target.value})} className="rounded-xl font-bold" /></div>
+                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Standard / Eventi (Ore)</Label><Input type="number" value={localSettings.lead_time_std_ore} onChange={e => setLocalSettings({...localSettings, lead_time_std_ore: e.target.value})} className="rounded-xl font-bold" /></div>
+                          <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Urgenze (Minuti)</Label><Input type="number" value={localSettings.lead_time_urgenza_min} onChange={e => setLocalSettings({...localSettings, lead_time_urgenza_min: e.target.value})} className="rounded-xl font-bold" /></div>
                       </CardContent>
                   </Card>
               </div>
@@ -230,8 +237,20 @@ export default function AdminSettingsPage() {
                 <Card className="rounded-2xl border-none shadow-sm">
                     <CardHeader className="bg-slate-50/50 border-b"><CardTitle className="text-lg font-black uppercase tracking-widest">Dati di Contatto Sistema</CardTitle></CardHeader>
                     <CardContent className="p-8 space-y-6">
-                        <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Numero WhatsApp Assistenza</Label><Input value={localSettings.whatsappNumber} onChange={e => setLocalSettings({...localSettings, whatsappNumber: e.target.value})} className="rounded-xl h-12 font-bold" /></div>
-                        <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Sede Operativa (Base)</Label><Input value={localSettings.homeBaseAddress} onChange={e => setLocalSettings({...localSettings, homeBaseAddress: e.target.value})} className="rounded-xl h-12 font-bold" /></div>
+                        <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Numero WhatsApp Assistenza</Label><Input value={localSettings.admin_whatsapp} onChange={e => setLocalSettings({...localSettings, admin_whatsapp: e.target.value})} className="rounded-xl h-12 font-bold" /></div>
+                        <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Sede Operativa (Base)</Label><Input value={localSettings.sede_base} onChange={e => setLocalSettings({...localSettings, sede_base: e.target.value})} className="rounded-xl h-12 font-bold" /></div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Latitudine Sede</Label><Input value={localSettings.sede_lat} onChange={e => setLocalSettings({...localSettings, sede_lat: e.target.value})} className="rounded-xl h-12 font-bold" /></div>
+                            <div className="space-y-1"><Label className="text-[10px] font-black uppercase text-slate-400">Longitudine Sede</Label><Input value={localSettings.sede_lon} onChange={e => setLocalSettings({...localSettings, sede_lon: e.target.value})} className="rounded-xl h-12 font-bold" /></div>
+                        </div>
+                        <Separator />
+                        <div className="space-y-1">
+                            <Label className="text-[10px] font-black uppercase text-slate-400">Link Sito Pubblico (Condivisione)</Label>
+                            <div className="relative">
+                                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <Input value={localSettings.public_site_url || 'https://azzurro-community.vercel.app'} onChange={e => setLocalSettings({...localSettings, public_site_url: e.target.value})} className="rounded-xl h-12 font-bold pl-10" placeholder="https://..." />
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
               </div>

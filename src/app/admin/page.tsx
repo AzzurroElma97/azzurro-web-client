@@ -71,12 +71,24 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
   const [isAutoWaiting, setIsAutoWaiting] = useState(false);
+  const [appSettings, setAppSettings] = useState<any>(null);
+  const [isServerOnline, setIsServerOnline] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const authStatus = localStorage.getItem('isAdminAuthenticated');
     if (authStatus === 'true') {
       setIsAuthenticated(true);
+      socketService.emit('client_request', { action: 'GET_SETTINGS' }, (res: any) => {
+        if (res && res.success) setAppSettings(res.payload);
+      });
+      
+      const unsubs = socketService.onStatusChange((status) => {
+        setIsServerOnline(status);
+      });
+      setIsServerOnline(socketService.isMasterOnline());
+      
+      return () => unsubs();
     }
   }, []);
 
@@ -272,7 +284,13 @@ export default function AdminPage() {
             <main className="max-w-5xl mx-auto space-y-10">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-2">
-                        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Dashboard Admin</h1>
+                        <div className="flex items-center gap-4">
+                            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Dashboard Admin</h1>
+                            <Badge className={cn("px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest", isServerOnline ? "bg-emerald-100 text-emerald-600 border-emerald-200" : "bg-red-100 text-red-600 border-red-200")}>
+                                <div className={cn("w-1.5 h-1.5 rounded-full mr-2", isServerOnline ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
+                                {isServerOnline ? 'Master Online' : 'Master Offline'}
+                            </Badge>
+                        </div>
                         <p className="text-slate-500 font-medium">Benvenuto nel cuore operativo della Community Azzurro.</p>
                     </div>
                     <Button 
@@ -344,7 +362,7 @@ export default function AdminPage() {
                     
                     {/* Shareable Link Card */}
                     <Card className="h-full hover:shadow-md transition-all rounded-2xl border-none shadow-sm overflow-hidden cursor-pointer group" onClick={() => {
-                        const url = window.location.origin;
+                        const url = appSettings?.public_site_url || window.location.origin;
                         if (navigator.share) {
                             navigator.share({
                                 title: 'Azzurro Community Ride',

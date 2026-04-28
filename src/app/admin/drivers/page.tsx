@@ -229,6 +229,8 @@ export default function ManageDriversPage() {
         ...u, 
         name: u.nome || (u.email?.split('@')[0] || 'Sconosciuto'), 
         isDriver: u.type === 'DRIVER' || !!driver, 
+        lastLogin: u.ultimo_accesso,
+        totalActivity: u.total_rides || u.total_bookings || 0,
         driverProfile: driver || (u.type === 'DRIVER' ? u : null)
       };
   });
@@ -269,14 +271,16 @@ export default function ManageDriversPage() {
               <TableHeader className="bg-slate-50/50">
                 <TableRow>
                   <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400 h-12 px-6">Identità</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400 h-12">Stato</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400 h-12 text-center">Ruolo Driver</TableHead>
+                  <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400 h-12">Attività / Login</TableHead>
+                  <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400 h-12 text-center">Statistiche</TableHead>
+                  <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400 h-12 text-center">Stato Driver</TableHead>
                   <TableHead className="text-right font-black uppercase text-[10px] tracking-widest text-slate-400 h-12 px-6">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPeople.length > 0 ? filteredPeople.map((person) => {
-                  const isApproved = person.driverProfile?.isApproved;
+                  const isApproved = person.driverProfile?.is_attivo === 1 || person.driverProfile?.is_attivo === true;
+                  const isDriver = person.isDriver;
                   const isConfirmingRevoke = confirmingRevocationId === person.id;
 
                   return (
@@ -291,12 +295,24 @@ export default function ManageDriversPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-left">
+                        <div className="flex flex-col">
+                            <span className="font-bold text-slate-700 text-[11px] flex items-center gap-1.5"><Clock className="w-3 h-3 text-slate-400" /> {person.lastLogin ? new Date(person.lastLogin).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Mai collegato'}</span>
+                            <span className="text-[9px] text-slate-400 font-medium">Ultimo accesso registrato</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                         <div className="flex flex-col items-center">
+                            <span className="text-lg font-black text-slate-900 leading-none">{person.totalActivity}</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{person.isDriver ? 'Corse' : 'Prenotazioni'}</span>
+                         </div>
+                      </TableCell>
+                      <TableCell className="text-left">
                         {person.isDriver ? (
-                          <div className="flex flex-col">
-                              <span className="font-bold text-slate-700 text-[11px] flex items-center gap-1.5"><Car className="w-3 h-3 text-blue-500" /> {person.driverProfile.vehicle || 'Auto non impostata'}</span>
-                              <div className="flex items-center gap-1 text-[9px] text-yellow-500 font-bold"><Star className="w-2.5 h-2.5 fill-yellow-400" /> {person.driverProfile.driverRating || '5.0'}</div>
+                          <div className="flex flex-col items-center">
+                              <span className="font-bold text-slate-700 text-[11px] flex items-center gap-1.5"><Car className="w-3 h-3 text-blue-500" /> {person.driverProfile?.vehicle || 'Auto non impostata'}</span>
+                              <div className="flex items-center gap-1 text-[9px] text-yellow-500 font-bold"><Star className="w-2.5 h-2.5 fill-yellow-400" /> {person.driverProfile?.driverRating || '5.0'}</div>
                           </div>
-                        ) : <Badge variant="outline" className="text-[9px] font-black uppercase text-slate-300 tracking-widest">Passeggero</Badge>}
+                        ) : <div className="flex justify-center"><Badge variant="outline" className="text-[9px] font-black uppercase text-slate-300 tracking-widest">Passeggero</Badge></div>}
                       </TableCell>
                       <TableCell className="text-center">
                         {isConfirmingRevoke ? (
@@ -347,21 +363,34 @@ export default function ManageDriversPage() {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 rounded-xl p-1 shadow-lg">
-                                <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 tracking-widest px-2 py-1.5">Opzioni</DropdownMenuLabel>
-                                {person.isDriver && (
-                                  <DropdownMenuItem asChild>
-                                    <Link href={`/admin/drivers/${person.id}/availability`} className="rounded-lg text-xs font-bold gap-2 cursor-pointer">
-                                      <CalendarRange className="w-3.5 h-3.5" /> Gestisci Disponibilità
-                                    </Link>
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem onClick={() => isApproved ? handleRevokeClick(person.id) : handleToggleApproval(person.id, !!isApproved)} className="rounded-lg text-xs font-bold gap-2 cursor-pointer">{isApproved ? 'Revoca Driver' : 'Promuovi a Driver'}</DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => handleResetPassword(person.isDriver ? 'DRIVER' : 'CUSTOMER', person.id, person.name)} className="rounded-lg text-xs font-bold gap-2 cursor-pointer text-blue-600">
-                                    <RefreshCcw className="w-3.5 h-3.5" /> Resetta Password
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => handleDeleteUser(person.id)} className="text-red-600 rounded-lg text-xs font-bold gap-2 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /> Elimina Utente</DropdownMenuItem>
+                                 <DropdownMenuLabel className="text-[9px] font-black uppercase text-slate-400 tracking-widest px-2 py-1.5">Opzioni</DropdownMenuLabel>
+                                 {person.id === 1 ? (
+                                   <DropdownMenuItem asChild>
+                                      <Link href="/profile" className="rounded-lg text-xs font-bold gap-2 cursor-pointer text-blue-600">
+                                        <ShieldCheck className="w-3.5 h-3.5" /> Vedi Profilo Admin
+                                      </Link>
+                                   </DropdownMenuItem>
+                                 ) : (
+                                   <>
+                                      {person.isDriver && (
+                                        <DropdownMenuItem asChild>
+                                          <Link href={`/admin/drivers/${person.id}/availability`} className="rounded-lg text-xs font-bold gap-2 cursor-pointer">
+                                            <CalendarRange className="w-3.5 h-3.5" /> Gestisci Disponibilità
+                                          </Link>
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuItem onClick={() => isApproved ? handleRevokeClick(person.id) : handleToggleApproval(person.id, !!isApproved)} className="rounded-lg text-xs font-bold gap-2 cursor-pointer">{isApproved ? 'Revoca Driver' : 'Promuovi a Driver'}</DropdownMenuItem>
+                                   </>
+                                 )}
+                                 <DropdownMenuSeparator />
+                                 <DropdownMenuItem onClick={() => handleResetPassword(person.isDriver ? 'DRIVER' : 'CUSTOMER', person.id, person.name)} className="rounded-lg text-xs font-bold gap-2 cursor-pointer text-amber-600">
+                                    <KeyRound className="w-3.5 h-3.5" /> Reset Password
+                                 </DropdownMenuItem>
+                                 {person.id !== 1 && (
+                                   <DropdownMenuItem onClick={() => handleDeleteUser(person.id)} className="rounded-lg text-xs font-bold gap-2 cursor-pointer text-red-600">
+                                      <Trash2 className="w-3.5 h-3.5" /> Elimina Account
+                                   </DropdownMenuItem>
+                                 )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -385,11 +414,10 @@ export default function ManageDriversPage() {
                   <div className="p-2.5 rounded-2xl text-white shadow-lg bg-blue-600"><User className="w-5 h-5" /></div>
                   {selectedPerson?.name}
                 </DialogTitle>
-                <TabsList className="grid w-full grid-cols-4 bg-slate-200/50 rounded-2xl p-1 h-12 mt-4">
+                <TabsList className="grid w-full grid-cols-3 bg-slate-200/50 rounded-2xl p-1 h-12 mt-4">
                   <TabsTrigger value="account" className="rounded-xl font-bold text-[10px]">Profilo</TabsTrigger>
-                  <TabsTrigger value="rates" className="rounded-xl font-bold text-[10px]" disabled={!selectedPerson?.isDriver}>Tariffe</TabsTrigger>
-                  <TabsTrigger value="extra" className="rounded-xl font-bold text-[10px]" disabled={!selectedPerson?.isDriver}>Supplementi</TabsTrigger>
-                  <TabsTrigger value="services" className="rounded-xl font-bold text-[10px]" disabled={!selectedPerson?.isDriver}>Servizi</TabsTrigger>
+                  <TabsTrigger value="rates" className="rounded-xl font-bold text-[10px]" disabled={!selectedPerson?.isDriver}>Tariffe & Supplementi</TabsTrigger>
+                  <TabsTrigger value="services" className="rounded-xl font-bold text-[10px]" disabled={!selectedPerson?.isDriver}>Servizi Attivi</TabsTrigger>
                 </TabsList>
               </DialogHeader>
               
@@ -403,8 +431,12 @@ export default function ManageDriversPage() {
                           <Input value={selectedPerson.name || ''} onChange={e => setSelectedPerson({...selectedPerson, name: e.target.value})} className="rounded-xl h-12 font-bold bg-slate-50/50 border-transparent focus:bg-white" />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Veicolo Attuale</Label>
-                          <Input value={selectedPerson.vehicle || ''} onChange={e => setSelectedPerson({...selectedPerson, vehicle: e.target.value})} className="rounded-xl h-12 font-bold bg-slate-50/50 border-transparent focus:bg-white" />
+                          <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Latitudine Casa</Label>
+                          <Input type="number" step="0.0001" value={selectedPerson.lat_casa || ''} onChange={e => setSelectedPerson({...selectedPerson, lat_casa: e.target.value})} className="rounded-xl h-12 font-bold bg-slate-50/50 border-transparent focus:bg-white" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] font-black text-slate-400 uppercase ml-1">Longitudine Casa</Label>
+                          <Input type="number" step="0.0001" value={selectedPerson.lon_casa || ''} onChange={e => setSelectedPerson({...selectedPerson, lon_casa: e.target.value})} className="rounded-xl h-12 font-bold bg-slate-50/50 border-transparent focus:bg-white" />
                         </div>
                       </div>
                     </TabsContent>
@@ -417,50 +449,29 @@ export default function ManageDriversPage() {
                       
                       <div className="space-y-8">
                         <div>
-                          <h4 className="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] mb-4 flex items-center gap-2"><Navigation className="w-3 h-3" /> Basi & Accettazione</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <DriverConfigInput label="Quota Fissa Base (€)" value={selectedPerson.basePrice} placeholder={appSettings?.basePrice} onChange={v => setSelectedPerson({...selectedPerson, basePrice: v})} icon={<Banknote className="w-4 h-4" />} />
-                            <DriverConfigInput label="Minimo Accettazione (€)" value={selectedPerson.minAcceptableFare} placeholder={appSettings?.minAcceptableFare} onChange={v => setSelectedPerson({...selectedPerson, minAcceptableFare: v})} icon={<CheckSquare className="w-4 h-4" />} />
+                            <DriverConfigInput label="Quota Fissa Base (€)" value={selectedPerson.corsa_minima} placeholder={appSettings?.tariffa_base_fissa} onChange={v => setSelectedPerson({...selectedPerson, corsa_minima: v})} icon={<Banknote className="w-4 h-4" />} />
                           </div>
                         </div>
                         <Separator className="bg-slate-100" />
                         <div>
                           <h4 className="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] mb-4 flex items-center gap-2"><Clock className="w-3 h-3" /> Tariffe Chilometriche</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <DriverConfigInput label="Prezzo KM Diurno (€)" value={selectedPerson.kmPrice} placeholder={appSettings?.kmPrice} onChange={v => setSelectedPerson({...selectedPerson, kmPrice: v})} step={0.01} icon={<Car className="w-4 h-4" />} />
-                            <DriverConfigInput label="Prezzo KM Notturno (€)" value={selectedPerson.nightKmPrice} placeholder={appSettings?.nightKmPrice} onChange={v => setSelectedPerson({...selectedPerson, nightKmPrice: v})} step={0.01} icon={<Clock className="w-4 h-4" />} />
+                            <DriverConfigInput label="Prezzo KM Diurno (€)" value={selectedPerson.tariffa_diurna} placeholder={appSettings?.tariffa_km_diurna} onChange={v => setSelectedPerson({...selectedPerson, tariffa_diurna: v})} step={0.01} icon={<Car className="w-4 h-4" />} />
+                            <DriverConfigInput label="Prezzo KM Notturno (€)" value={selectedPerson.tariffa_notturna} placeholder={appSettings?.tariffa_km_notturna} onChange={v => setSelectedPerson({...selectedPerson, tariffa_notturna: v})} step={0.01} icon={<Clock className="w-4 h-4" />} />
                           </div>
                         </div>
                         <Separator className="bg-slate-100" />
                         <div>
                           <h4 className="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] mb-4 flex items-center gap-2"><Percent className="w-3 h-3" /> Supplementi Servizi</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <DriverConfigInput label="Minimo Aeroporto (€)" value={selectedPerson.airportMinFare} placeholder={appSettings?.airportMinFare} onChange={v => setSelectedPerson({...selectedPerson, airportMinFare: v})} icon={<Plane className="w-4 h-4" />} />
-                            <DriverConfigInput label="Supplemento Urgenza (€)" value={selectedPerson.urgentFee} placeholder={appSettings?.urgentFee} onChange={v => setSelectedPerson({...selectedPerson, urgentFee: v})} icon={<ShieldAlert className="w-4 h-4" />} />
-                            <DriverConfigInput label="Ricarico Serata (%)" value={selectedPerson.eventSurchargePercent} placeholder={appSettings?.eventSurchargePercent} onChange={v => setSelectedPerson({...selectedPerson, eventSurchargePercent: v})} icon={<Percent className="w-4 h-4" />} />
+                            <DriverConfigInput label="Minimo Aeroporto (€)" value={selectedPerson.pax_aero_fisso} placeholder={appSettings?.tariffa_minima_aeroporto} onChange={v => setSelectedPerson({...selectedPerson, pax_aero_fisso: v})} icon={<Plane className="w-4 h-4" />} />
+                            <DriverConfigInput label="Supplemento Bagaglio (€)" value={selectedPerson.bagaglio_fisso} placeholder={appSettings?.supplemento_bagaglio} onChange={v => setSelectedPerson({...selectedPerson, bagaglio_fisso: v})} icon={<Briefcase className="w-4 h-4" />} />
                           </div>
                         </div>
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="extra" className="mt-0 space-y-8 outline-none">
-                      <div className="space-y-8">
-                        <div>
-                          <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-5 flex items-center gap-2"><Users className="w-3.5 h-3.5" /> Persone Extra</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                            <DriverConfigInput label="Extra Pax Aeroporto (€)" value={selectedPerson.extraPassengerFixed} placeholder={appSettings?.extraPassengerFixed} onChange={v => setSelectedPerson({...selectedPerson, extraPassengerFixed: v})} icon={<Banknote className="w-4 h-4" />} tooltip="Somma fissa per ogni passeggero oltre il primo negli aeroporti" />
-                            <DriverConfigInput label="Extra Pax Altri (%)" value={selectedPerson.extraPassengerPercent} placeholder={appSettings?.extraPassengerPercent} onChange={v => setSelectedPerson({...selectedPerson, extraPassengerPercent: v})} icon={<Percent className="w-4 h-4" />} tooltip="Percentuale aggiunta per ogni passeggero extra negli altri servizi" />
-                          </div>
-                        </div>
-                        <Separator className="bg-slate-100" />
-                        <div>
-                          <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-5 flex items-center gap-2"><Briefcase className="w-3.5 h-3.5" /> Bagagli</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                            <DriverConfigInput label="Prezzo Singolo Bagaglio (€)" value={selectedPerson.luggagePrice} placeholder={appSettings?.luggagePrice} onChange={v => setSelectedPerson({...selectedPerson, luggagePrice: v})} icon={<Briefcase className="w-4 h-4" />} tooltip="Costo fisso aggiunto per ogni bagaglio inserito" />
-                          </div>
-                        </div>
-                      </div>
-                    </TabsContent>
 
                     <TabsContent value="services" className="mt-0 space-y-4 outline-none">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

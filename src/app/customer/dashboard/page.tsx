@@ -20,6 +20,10 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { socketService } from '@/services/socket-service';
 import Link from 'next/link';
+import { RideSummaryCard } from '@/components/common/ride-summary-card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Eye, FileText, Download, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface Booking {
   id: number;
@@ -38,6 +42,8 @@ export default function CustomerDashboard() {
   const [customerData, setCustomerData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [appSettings, setAppSettings] = useState<any>({});
   const router = useRouter();
 
   useEffect(() => {
@@ -64,6 +70,11 @@ export default function CustomerDashboard() {
         setError(res?.message || 'Errore nel recupero delle prenotazioni.');
       }
     }, 15000);
+
+    // Recupero settings per WhatsApp
+    socketService.emit('client_request', { action: 'GET_SETTINGS' }, (res: any) => {
+        if (res && res.success) setAppSettings(res.payload);
+    });
 
     // Ascolta aggiornamenti in tempo reale (Tracker)
     socketService.on('sync_customer_bookings', (updatedBookings: Booking[]) => {
@@ -180,6 +191,14 @@ export default function CustomerDashboard() {
                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Prezzo Concordato</p>
                              <p className="text-2xl font-black text-blue-600">€{booking.preventivo_accettato}</p>
                          </div>
+                         <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setSelectedBooking(booking)}
+                            className="rounded-xl font-bold text-[10px] uppercase gap-2 border-blue-100 text-blue-600 hover:bg-blue-50"
+                         >
+                            <Eye className="w-3.5 h-3.5" /> Anteprima
+                         </Button>
                       </div>
                     </div>
 
@@ -228,6 +247,42 @@ export default function CustomerDashboard() {
             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">© Azzurro Community Titanium - Local Blackview Engine</p>
          </div>
       </footer>
+
+      {/* Modal Anteprima */}
+      <Dialog open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
+        <DialogContent className="max-w-md p-0 overflow-hidden border-none rounded-[2.5rem] bg-white">
+            <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-600 rounded-xl">
+                        <FileText className="w-5 h-5" />
+                    </div>
+                    <h3 className="font-black uppercase tracking-tighter">Riepilogo Prenotazione</h3>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setSelectedBooking(null)} className="text-slate-400 hover:text-white rounded-full">
+                    <X className="w-5 h-5" />
+                </Button>
+            </div>
+            <div className="p-8">
+                {selectedBooking && (
+                    <RideSummaryCard 
+                        ride={{
+                            ...selectedBooking,
+                            origin: selectedBooking.partenza_indirizzo,
+                            destination: selectedBooking.destinazione_indirizzo,
+                            date: selectedBooking.data_partenza,
+                            time: selectedBooking.ora_partenza,
+                            price: selectedBooking.preventivo_accettato,
+                            passengerName: customerData?.nome || 'Cliente',
+                            passengerPhone: customerData?.telefono || '',
+                            serviceType: selectedBooking.tipo_servizio || 'STANDARD'
+                        }} 
+                        finalCode={selectedBooking.ticket_id} 
+                        adminWhatsapp={appSettings.admin_whatsapp} 
+                    />
+                )}
+            </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

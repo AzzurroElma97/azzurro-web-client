@@ -12,15 +12,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format, addMonths, startOfMonth, startOfDay } from 'date-fns';
+import { format, addMonths, startOfMonth, startOfDay, isToday } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { CalendarIcon, Car, Loader2, MapPin, MessageSquare, Send, User, ChevronRight, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { socketService } from '@/services/socket-service';
-import { RideSummaryCard } from '@/components/common/ride-summary-card';
 import { Badge } from '@/components/ui/badge';
+import { geocodeAddress, calculateOperationalKm, calculateRidePrice, MASTER_BASE } from '@/lib/maps-service';
+import { differenceInHours, differenceInMinutes, parse } from 'date-fns';
 
 const bookingSchema = z.object({
   serviceType: z.string().min(1, 'Il tipo di servizio è obbligatorio'),
@@ -88,59 +88,154 @@ export default function BookingClient() {
     }
   }, [messages]);
 
-  const handleBookingCompletion = (rideDetails: any) => {
+  const handleBookingCompletion = async (rideDetails: any) => {
+    setIsLoading(true);
     const ticketId = 'AZR-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    // --- 1. VALIDAZIONE LEAD TIME ---
+    const now = new Date();
+    const rideDate = rideDetails.rideDate ? new Date(rideDetails.rideDate) : form.getValues('rideDate');
+    const rideTime = rideDetails.rideTime || form.getValues('rideTime');
+    const serviceType = (rideDetails.serviceType || form.getValues('serviceType')).toUpperCase();
+    
+    const combinedDateTime = parse(`${format(rideDate, 'yyyy-MM-dd')} ${rideTime}`, 'yyyy-MM-dd HH:mm', new Date());
+    const diffHours = differenceInHours(combinedDateTime, now);
+    const diffMinutes = differenceInMinutes(combinedDateTime, now);
+
+    // Controllo fondamentale: non si può prenotare nel passato (nemmeno 1 minuto fa)
+    if (combinedDateTime <= now) {
+        setIsLoading(false);
+        toast({
+            variant: "destructive",
+            title: "Orario non valido",
+            description: "Non è possibile prenotare una corsa per un orario già passato.",
+        });
+        return;
+    }
+
+    let leadTimeOk = true;
+    let minNeeded = "";
+
+    if (serviceType === 'AIRPORT' && diffHours < (parseInt(appSettings.lead_time_aero_ore) || 6)) {
+        leadTimeOk = false;
+        minNeeded = `${appSettings.lead_time_aero_ore || 6} ore`;
+    } else if (serviceType === 'URGENT') {
+        if (diffMinutes < (parseInt(appSettings.lead_time_urgenza_min) || 15)) {
+            leadTimeOk = false;
+            minNeeded = `${appSettings.lead_time_urgenza_min || 15} minuti`;
+        }
+    } else if (diffHours < (parseInt(appSettings.lead_time_std_ore) || 4)) {
+        leadTimeOk = false;
+        minNeeded = `${appSettings.lead_time_std_ore || 4} ore`;
+    }
+
+    if (!leadTimeOk) {
+        setIsLoading(false);
+        toast({
+            variant: "destructive",
+            title: "Preavviso Insufficiente",
+            description: `Per il servizio ${serviceType} sono necessarie almeno ${minNeeded} di preavviso.`,
+        });
+        return;
+    }
+
+    // --- 2. GEOCODIFICA E CALCOLO KM REALI ---
+    const origin = rideDetails.pickupLocation || form.getValues('pickupLocation');
+    const dest = rideDetails.dropoffLocation || form.getValues('dropoffLocation');
+    
+    const [coordStart, coordEnd] = await Promise.all([
+        geocodeAddress(origin),
+        geocodeAddress(dest)
+    ]);
+
+    let kmOperativi = 0;
+    let baseCoord = MASTER_BASE;
+    // Se abbiamo impostato una sede diversa nelle impostazioni, usiamo quella
+    if (appSettings.sede_lat && appSettings.sede_lon) {
+        baseCoord = { lat: parseFloat(appSettings.sede_lat), lon: parseFloat(appSettings.sede_lon), address: appSettings.sede_base };
+    }
+
+    if (coordStart && coordEnd) {
+        kmOperativi = calculateOperationalKm(coordStart, coordEnd, baseCoord);
+    }
+
+    // --- 3. CALCOLO PREZZO ---
+    const isNight = rideTime >= (appSettings.nightStart || '22:00') || rideTime <= (appSettings.nightEnd || '06:00');
+    const estPrice = calculateRidePrice(kmOperativi, appSettings, {
+        isNight,
+        isAirport: serviceType === 'AIRPORT',
+        isUrgent: serviceType === 'URGENT',
+        isEvent: serviceType === 'EVENT',
+        isWeekend: [0, 6].includes(rideDate.getDay())
+    });
+
     const rideData = {
         ...rideDetails,
         ticket_id: ticketId,
-        date: rideDetails.rideDate ? format(new Date(rideDetails.rideDate), 'dd/MM/yyyy') : format(form.getValues('rideDate'), 'dd/MM/yyyy'),
-        time: rideDetails.rideTime || form.getValues('rideTime'),
-        origin: rideDetails.pickupLocation || form.getValues('pickupLocation'),
-        destination: rideDetails.dropoffLocation || form.getValues('dropoffLocation'),
+        date: format(rideDate, 'dd/MM/yyyy'),
+        time: rideTime,
+        origin: coordStart?.address || origin,
+        destination: coordEnd?.address || dest,
         passengerName: rideDetails.passengerName || form.getValues('passengerName'),
         passengerPhone: rideDetails.passengerPhone || form.getValues('passengerPhone'),
-        serviceType: (rideDetails.serviceType || form.getValues('serviceType')).toUpperCase(),
-        price: "Da concordare" // L'AI non calcola il prezzo fisso tecnico, lo farà il driver
+        serviceType: serviceType,
+        price: estPrice > 0 ? `€${estPrice}` : "Da confermare",
+        km_operativi: kmOperativi
     };
 
     setFinalRideData(rideData);
     setFinalTicketId(ticketId);
     setIsBookingDone(true);
+    setIsLoading(false);
+
+    // Recupera email se loggato
+    const userStr = localStorage.getItem('customerData') || localStorage.getItem('driverData');
+    let cliente_email = '';
+    if (userStr) {
+        try {
+            cliente_email = JSON.parse(userStr).email || '';
+        } catch(e) {}
+    }
 
     // Invia al server Blackview
     socketService.emit('client_request', { 
         action: 'PRENOTA_CORSA_CLIENTE', 
         payload: {
             ...rideData,
-            data_partenza: rideDetails.rideDate ? format(new Date(rideDetails.rideDate), 'yyyy-MM-dd') : format(form.getValues('rideDate'), 'yyyy-MM-dd'),
+            cliente_email: cliente_email,
+            data_partenza: format(rideDate, 'yyyy-MM-dd'),
             ora_partenza: rideData.time,
             cliente_nome: rideData.passengerName,
             cliente_telefono: rideData.passengerPhone,
-            partenza_obj: { address: rideData.origin },
-            destinazione_obj: { address: rideData.destination },
-            tipo_servizio: rideData.serviceType
+            partenza_obj: coordStart || { address: origin },
+            destinazione_obj: coordEnd || { address: dest },
+            tipo_servizio: rideData.serviceType,
+            km_calcolati: kmOperativi,
+            preventivo_accettato: estPrice
         } 
     });
 
     toast({
         title: "Prenotazione Completata!",
-        description: "Redirecting to WhatsApp...",
+        description: "Prezzo calcolato in tempo reale.",
     });
 
     // Automatic WhatsApp Redirect after 2 seconds
     setTimeout(() => {
         const waMessage = 
-          `🚗 *PRENOTAZIONE AZZURRO (AI ASSISTANT)*\n` +
+          `🚗 *PRENOTAZIONE AZZURRO REAL*\n` +
           `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
           `📋 *Codice:* ${ticketId}\n` +
           `🏷️ *Servizio:* ${rideData.serviceType}\n` +
           `👤 *Passeggero:* ${rideData.passengerName}\n` +
           `📅 *Data:* ${rideData.date} alle ${rideData.time}\n` +
+          `💰 *Prezzo Stimato:* ${rideData.price}\n` +
+          `📏 *Percorso Operativo:* ${kmOperativi} km\n` +
           `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
           `🟢 *Partenza:* ${rideData.origin}\n` +
           `🔴 *Arrivo:* ${rideData.destination}\n` +
           `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-          `🤖 _Richiesta generata via AI Assistant_`;
+          `🤖 _Richiesta calcolata in tempo reale_`;
         
         const cleanNumber = (appSettings.admin_whatsapp || '393274723787').replace(/\+/g, '').replace(/\s/g, '');
         window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(waMessage)}`, '_blank');
@@ -394,7 +489,9 @@ export default function BookingClient() {
                                     mode="single"
                                     selected={field.value}
                                     onSelect={field.onChange}
-                                    disabled={(date) => date < startOfDay(new Date()) || date > addMonths(startOfMonth(new Date()), 6)}
+                                    disabled={(date) =>
+                                        date < startOfDay(new Date()) || date > addMonths(new Date(), 3)
+                                    }
                                     initialFocus
                                     locale={it}
                                 />
