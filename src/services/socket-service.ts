@@ -56,6 +56,14 @@ class SocketService {
         }
       });
 
+      this.socket.on('master_response', (data: any) => {
+        console.log("⚡ [TITANIUM] Risposta Master ricevuta:", data.action);
+        // Inoltriamo l'evento internamente per i componenti in ascolto
+        if (this.socket) {
+          this.socket.emit('master_direct_response', data);
+        }
+      });
+
       // Poll periodico se il relay non pusha (allineato alla nuova tolleranza di 90s)
       setInterval(() => this.checkMasterPresence(), 25000);
     }

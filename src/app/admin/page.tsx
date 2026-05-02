@@ -120,43 +120,44 @@ export default function AdminPage() {
     setError('');
 
     const attempt = () => {
-      const senderId = socketService.getSocketId();
-      console.log(`📡 [TITANIUM] Invio richiesta con ID Mittente: ${senderId}`);
+      console.log(`⏳ [TITANIUM] Richiesta inviata. In attesa di autorizzazione...`);
+      const sId = socketService.getSocketId();
 
-      // Prepariamo l'ascolto del segnale di sblocco diretto (più robusto della callback)
-      const handleDirectResponse = (res: any) => {
-         if (res.action === 'REQUEST_AUTO_LOGIN_RESPONSE' && res.payload?.success) {
-            console.log("⚡ [TITANIUM] Ricevuto SBLOCCO DIRETTO dal Master!");
-            socketService.off('master_direct_response');
-            setIsAuthenticated(true);
-            setIsAutoWaiting(false);
-            localStorage.setItem('isAdminAuthenticated', 'true');
-            localStorage.setItem('adminEmail', res.payload?.email || 'creator.azzurro@gmail.com');
-         }
-      };
-      
-      socketService.on('master_direct_response', handleDirectResponse);
-
+      // 1. Invia la richiesta iniziale (per far apparire il modal sul Blackview)
       socketService.emit('client_request', {
         action: 'REQUEST_AUTO_LOGIN',
-        senderId: senderId, 
+        senderId: sId,
         device: typeof window !== 'undefined' ? navigator.userAgent : 'Web Client Titanium'
-      }, (res: any) => {
-        console.log("📩 [TITANIUM] Conferma ricezione dal Broker:", res);
-        
-        if (res && res.success) {
-           console.log("⏳ [TITANIUM] In attesa di sblocco manuale sul Blackview...");
-        } else {
-           const isExplicitDeny = res && res.success === false && res.message?.toLowerCase().includes('rifiutato');
-           if (!isExplicitDeny) {
-              socketService.off('master_direct_response');
-              console.log("📡 [TITANIUM] Master non pronto. Riprovo...");
-              setTimeout(attempt, 7000);
-           } else {
-              socketService.off('master_direct_response');
-              setIsAutoWaiting(false);
-              setError(res?.message || 'Accesso negato.');
-           }
+      });
+
+      // 2. Avvia il polling (controlla ogni 1.5 secondi se l'admin ha autorizzato)
+      const pollInterval = setInterval(() => {
+        socketService.emit('client_request', {
+          action: 'POLL_AUTO_LOGIN',
+          senderId: sId
+        }, (res: any) => {
+          if (res && res.success) {
+             console.log("⚡ [TITANIUM] Accesso AUTORIZZATO tramite Polling!");
+             clearInterval(pollInterval);
+             setIsAuthenticated(true);
+             setIsAutoWaiting(false);
+             localStorage.setItem('isAdminAuthenticated', 'true');
+             localStorage.setItem('adminEmail', res.email || 'creator.azzurro@gmail.com');
+          } else if (res && res.status === 'REJECTED') {
+             console.log("❌ [TITANIUM] Accesso RIFIUTATO dal Master.");
+             clearInterval(pollInterval);
+             setIsAutoWaiting(false);
+             setError(res.message || 'Accesso rifiutato dal dispositivo Master.');
+          }
+        });
+      }, 1500);
+
+      // Timeout di sicurezza dopo 60 secondi
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (isAutoWaiting) {
+          setIsAutoWaiting(false);
+          setError('Il tempo per l\'autorizzazione è scaduto.');
         }
       }, 60000);
     };
