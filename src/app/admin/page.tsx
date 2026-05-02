@@ -121,7 +121,8 @@ export default function AdminPage() {
 
     const attempt = () => {
       console.log(`⏳ [TITANIUM] Richiesta inviata. In attesa di autorizzazione...`);
-      const sId = socketService.getSocketId();
+      // Generiamo un ID univoco robusto indipendente dal socket
+      const sId = `req_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
       // 1. Invia la richiesta iniziale (per far apparire il modal sul Blackview)
       socketService.emit('client_request', {
@@ -149,7 +150,7 @@ export default function AdminPage() {
              setIsAutoWaiting(false);
              setError(res.message || 'Accesso rifiutato dal dispositivo Master.');
           }
-        });
+        }, 10000);
       }, 1500);
 
       // Timeout di sicurezza dopo 60 secondi
