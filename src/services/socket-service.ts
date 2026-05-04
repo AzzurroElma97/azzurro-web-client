@@ -2,7 +2,7 @@ import { io, Socket } from 'socket.io-client';
 
 class SocketService {
   private socket: Socket | null = null;
-  private readonly RELAY_URL = 'http://192.168.1.231:3000'; // Test Locale Titanium v3.0
+  private readonly RELAY_URL = 'https://ponte-passaggi.onrender.com';
 
   constructor() {
     if (typeof window !== 'undefined') {
